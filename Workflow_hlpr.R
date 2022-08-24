@@ -1,4 +1,95 @@
 
+#' Get a data file
+#' 
+get.data.file = function(island, scenario){
+  if (island == 'oahu'){
+    data.file = "https://cida.usgs.gov/thredds/dodsC/oahu"
+  }
+  if (island == 'kauai'){
+    data.file = "https://cida.usgs.gov/thredds/dodsC/kauai"
+  }
+  if (island == 'hawaii'){
+    data.file = sprintf("https://cida.usgs.gov/thredds/dodsC/hawaii_%s_%s", island, scenario)
+  }
+  if (island == 'maui'){
+    data.file = sprintf("https://cida.usgs.gov/thredds/dodsC/hawaii_%s_%s", island, scenario)
+  }
+  return(data.file)  
+}
+
+#' Create directories to store data
+#' 
+create.my.directories = function(main.path){
+  dir.create(main.path)
+  dir.create(sprintf("%s/AnnualHourly", main.path))
+  dir.create(sprintf("%s/DailyMaxs", main.path))
+  dir.create(sprintf("%s/DailyMins", main.path))
+  dir.create(sprintf("%s/DailyMeans", main.path))
+  
+  annual.path = sprintf("%s/AnnualMeans", main.path)
+  dir.create(annual.path)
+  monthly.path = sprintf("%s/MonthlyMeans", main.path)
+  dir.create(monthly.path)
+  
+  # Create subpaths for monthly and annual paths
+  for (this.path in c(monthly.path, annual.path)){
+    dir.create(sprintf("%s/Maxs", this.path))
+    dir.create(sprintf("%s/Mins", this.path))
+    dir.create(sprintf("%s/Means", this.path))
+  }
+  
+}
+
+#' Create a Data Grid
+#' 
+make.data.grid = function(my.ncdf, island, grid.file){
+  
+  # Synthesized version
+  if (island == "oahu" | island == "kauai"){
+    dim1 = my.ncdf$var$T2_present$varsize[1]
+    dim2 = my.ncdf$var$T2_present$varsize[2]
+  }
+  
+  if (island == "hawaii" | island == "maui"){
+    dim1 = my.ncdf$var$T2$varsize[1]
+    dim2 = my.ncdf$var$T2$varsize[2]
+  }
+  
+  # Create a simple data frame to store the grid # Just take first entry to be arbitrary 
+  vals = ncvar_get(my.ncdf, "T2_present", start = c(1,1,1), count = c(dim1,dim2,1))
+  lat = ncvar_get(my.ncdf, "XLAT", start = c(1,1), count = c(dim1,dim2))
+  lon = ncvar_get(my.ncdf, "XLONG", start = c(1,1), count = c(dim1,dim2))
+  xy.grid = data.frame(values = matrix(vals, ncol = 1), lat = matrix(lat, ncol = 1),
+                       lon = matrix(lon, ncol = 1),
+                       lat_index = sort(rep(seq(1,dim2), dim1)), lon_index = rep(seq(1,dim1), dim2))
+  
+  write.table(xy.grid, file = grid.file, sep = ',', row.names = FALSE, col.names = TRUE,
+              append = FALSE)
+}
+
+#**# Currently this is just extracting albedo, and is not joining to the xy.grid
+#**# Need to think about how this function will work.
+extract.data.by.grid = function(my.ncdf, STUFF){
+  # Try to export albedo to identify ocean vs. inland
+  albedo = ncvar_get(my.ncdf, "ALBEDO_present", start = c(1,1,24), count = c(-1,-1,1))
+  albedo.long = data.frame(values = matrix(albedo, ncol = 1), lat = matrix(lat, ncol = 1),
+                           lon = matrix(lon,ncol = 1))
+  write.table(albedo.long, file = "albedotest.csv", sep = ',', col.names = TRUE, row.names = FALSE)
+  
+}
+
+#' Extract data for a variable for a single location by row/column index
+#' 
+#' #**# NEED TO WATCH THAT I GET THE ROW/COLUMN INDICES CORRECT
+extract.data.by.location = function(my.ncdf, in.var, row.index, col.index, start.time, end.time){
+  #**# CHECK IF I REVERSET ROW/COLUMN
+  time.steps = end.time - start.time + 1 # Needs to be at least 1 to include end point
+  this.var = ncvar_get(my.ncdf, in.var, start = c(row.index,col.index,start.time), count = c(1,1,time.steps))
+  
+  return(this.var) #**# This is a vector of timestep values, correct?
+}
+
+
 #' Figure out arrays
 #' 
 array.test = function(){
@@ -77,6 +168,110 @@ create.daily.files = function(i, var, leap.years, new.var, day.start){
   # Return array objects
   return(list(min.day.array, max.day.array, mean.day.array))
 }
+
+
+#' Calculate Precipitation
+#'
+#'@param x The current precipitation value
+#'@param y The precipitation value from the prior timestep
+#' 
+calc.precip = function(x, y){
+  
+  # If x or y is NA, assign NA
+  if (is.na(y) | is.na(x)){ out = NA  }
+  
+  # Otherwise:
+  if (!is.na(y) & !is.na(x)){
+    # Try subtraction
+    out = x - y
+    
+    # 8/23/2022 We think the value may be carried over to the next day.
+    # It's unclear, because there are examples where the next day is less than the carry-over,
+    # but these are relatively infrequent.
+    
+    ## If it's negative, just use the value of x
+    #if (out < 0){
+    #  out = x
+    #}
+    
+    # If it is negative, drop the 100's and subtract the excess from x
+    count = 0
+    while(out < 0){
+      y = y - 100
+      out = x - y
+      # Create an upper limit for the number of while loops. This should never be reached.
+      count = count + 1
+      if (count == 5){
+        out = NA
+        break
+      }
+    }
+  }
+  
+  return(out)
+}
+
+#' Calculate daily Tmin, Tmax, and Tmean for each day in a year
+#' 
+#' Files will be saved into folders for easy organization
+#' 
+#' 
+#' @param day.start 1 sets it to start with the first record of the simulation.
+#' I think 1 would correspond to midnight GMT
+#' inspection of the data suggests that it is likely GMT, so probably want the day to start at
+#' 11 (11 - 10 = 1). If another daily rhythm is desired, adjust day.start as needed.
+#' 
+create.daily.ppt.files = function(i, var, new.var, timestep){
+  
+  warning("NEEDS TESTING")
+  warning("Will lose the first day of each year, and the last day of the last yeaer under the current implementation!")
+  
+  # https://www.geeksforgeeks.org/create-3d-array-using-the-dim-function-in-r/
+  # https://www.tutorialspoint.com/r/r_arrays.htm
+  
+  lat = dim(new.var)[1]
+  lon = dim(new.var)[2]
+  n.steps = dim(new.var)[3]
+
+  day.count = 1
+  hour.count = 1
+  cum.precip = rep(0, lat * lon)
+  # First value of the precipitation data sets are the last hour of the previous year, to use for initialization
+  initial.values = matrix(new.var[ , , 1], nrow = 1)
+  
+    # Iterate through new.var
+  for (k in 2:n.steps){
+    
+    # Convert the array to vector to allow differential processing
+    this.precip = matrix(new.var[ , , k], nrow = 1)
+    #Use a function to properly deal with negative values
+    new.precip = mapply(calc.precip, this.precip, initial.values)
+    initial.values = this.precip # update precipitation values for the next time step
+    # update cumulative precipitation
+    cum.precip = cum.precip + new.precip
+    
+    hour.count = hour.count + 1
+    # If a new day is started, save off the values
+    if (hour.count == 25){
+      if (day.count == 1){
+        day.ppt.array = cum.precip
+      }else{
+        # Adapt matrix test code from above to build out the correct length array
+        day.ppt.array = array(c(day.ppt.array, cum.precip), dim = c(lat, lon, day.count))
+      }
+      cum.precip = rep(0, lat * lon)
+      day.count = day.count + 1
+      hour.count = 1
+    }
+  }
+    
+  # Save the array as a data file with an array for each day
+  save(day.ppt.array, file = sprintf("%s_%s/DailyPPT/DailyPPT_%s_%s_year_%s", var, timestep, var, timestep, i + 1989))
+
+  # Return array objects
+  return(list(day.ppt.array))
+}
+
 
 #' Calculate mean, min, and max temperature for a monthly interval
 #' @param daily.stuff the three lists generated by the create.daily.files function
