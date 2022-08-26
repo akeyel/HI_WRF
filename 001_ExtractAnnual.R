@@ -19,16 +19,24 @@ if (is.ppt == 1){
   ppt.offset = -1
 }
 
-n.leap.years = 0
+# check if island path exists, if not, stop and confirm the user has selected the correct path
+island.path = sprintf("Vars/%s", island)
+if (!file.exists(island.path)){
+  stop(sprintf("Please check that %s exists and that the correct directory has been selected", island.path))
+}
+
+
 for (var in var.vec){
-  
+
+    
   # Check if a directory exists for this variable, if not, create it and the associated sub-directories
   main.path = sprintf("Vars/%s/%s", island, var)
   if (!file.exists(main.path)){
-    create.my.directories(main.path)
+    create.my.directories(main.path, ppt.offset)
   }
   message(var)
   # Extract Annual hourly data
+  n.leap.years = 0
   for (i in first.year:last.year){
     message(sprintf("Year %s", i + 1989))
     year.start = (i - 1) * normal.year + 1 + n.leap.years * 24 + TimeZone.Offset + ppt.offset  # Add 24 hours for each the leap day

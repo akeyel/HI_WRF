@@ -19,12 +19,17 @@ get.data.file = function(island, scenario){
 
 #' Create directories to store data
 #' 
-create.my.directories = function(main.path){
+create.my.directories = function(main.path, ppt.offset){
   dir.create(main.path)
   dir.create(sprintf("%s/AnnualHourly", main.path))
-  dir.create(sprintf("%s/DailyMaxs", main.path))
-  dir.create(sprintf("%s/DailyMins", main.path))
-  dir.create(sprintf("%s/DailyMeans", main.path))
+  
+  if (ppt.offset == 0){
+    dir.create(sprintf("%s/DailyMaxs", main.path))
+    dir.create(sprintf("%s/DailyMins", main.path))
+    dir.create(sprintf("%s/DailyMeans", main.path))
+  }else{
+    dir.create(sprintf("%s/DailyPPT", main.path))
+  }
   
   annual.path = sprintf("%s/AnnualMeans", main.path)
   dir.create(annual.path)
@@ -33,9 +38,13 @@ create.my.directories = function(main.path){
   
   # Create subpaths for monthly and annual paths
   for (this.path in c(monthly.path, annual.path)){
-    dir.create(sprintf("%s/Maxs", this.path))
-    dir.create(sprintf("%s/Mins", this.path))
-    dir.create(sprintf("%s/Means", this.path))
+    if (ppt.offset == 0){
+      dir.create(sprintf("%s/Maxs", this.path))
+      dir.create(sprintf("%s/Mins", this.path))
+      dir.create(sprintf("%s/Means", this.path))
+    }else{
+      dir.create(sprintf("%s/Cumulative_PPT", this.path))
+    }
   }
   
 }
@@ -161,9 +170,9 @@ create.daily.files = function(i, var, leap.years, new.var, day.start){
   }
   
   # Save the array as a data file with an array for each day
-  save(min.day.array, file = sprintf("Vars/%s/DailyMins/DailyMin_%s_year_%s", var, var, i + 1989))
-  save(max.day.array, file = sprintf("Vars/%s/DailyMaxs/DailyMax_%s_year_%s", var, var, i + 1989))
-  save(mean.day.array, file = sprintf("Vars/%s/DailyMeans/DailyMean_%s_year_%s", var, var, i + 1989))
+  save(min.day.array, file = sprintf("Vars/%s/DailyMins/DailyMin_%s_year_%s.rda", var, var, i + 1989))
+  save(max.day.array, file = sprintf("Vars/%s/DailyMaxs/DailyMax_%s_year_%s.rda", var, var, i + 1989))
+  save(mean.day.array, file = sprintf("Vars/%s/DailyMeans/DailyMean_%s_year_%s.rda", var, var, i + 1989))
   
   # Return array objects
   return(list(min.day.array, max.day.array, mean.day.array))
@@ -221,10 +230,7 @@ calc.precip = function(x, y){
 #' inspection of the data suggests that it is likely GMT, so probably want the day to start at
 #' 11 (11 - 10 = 1). If another daily rhythm is desired, adjust day.start as needed.
 #' 
-create.daily.ppt.files = function(i, var, new.var, timestep){
-  
-  warning("NEEDS TESTING")
-  warning("Will lose the first day of each year, and the last day of the last yeaer under the current implementation!")
+create.daily.ppt.files = function(i, var, new.var, timestep, island){
   
   # https://www.geeksforgeeks.org/create-3d-array-using-the-dim-function-in-r/
   # https://www.tutorialspoint.com/r/r_arrays.htm
@@ -266,7 +272,7 @@ create.daily.ppt.files = function(i, var, new.var, timestep){
   }
     
   # Save the array as a data file with an array for each day
-  save(day.ppt.array, file = sprintf("%s_%s/DailyPPT/DailyPPT_%s_%s_year_%s", var, timestep, var, timestep, i + 1989))
+  save(day.ppt.array, file = sprintf("Vars/%s/%s_%s/DailyPPT/DailyPPT_%s_%s_year_%s",island, var, timestep, var, timestep, i + 1989))
 
   # Return array objects
   return(list(day.ppt.array))

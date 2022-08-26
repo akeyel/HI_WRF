@@ -22,13 +22,13 @@ for (timestep in timesteps){
     #**# Not needed for processing daily data
     
     # Read in this year's data for main variable
-    load(sprintf("%s/AnnualHourly/%s_year_%s_%s.rda",main.var, main.var, i, TimeZone.Label))
+    load(sprintf("Vars/%s/%s/AnnualHourly/%s_year_%s_%s.rda",island, main.var, main.var, i, TimeZone.Label))
     rainnc = new.var
     rm(new.var)
           
     # Create a table with daily precipitation
     initial.value = NA
-    daily.stuff = create.daily.ppt.files(i, var, rainnc, timestep)
+    daily.stuff = create.daily.ppt.files(i, var, rainnc, timestep, island)
     
     # Process it to each timescale
     

@@ -56,18 +56,31 @@ if (make.grid == 1){
 source("001_ExtractAnnual.R")
 # NOTE: We lose 10 hours of the last day of the last year of the scenario run, due to the GMT offset
 
+# Error for Kauai - just restarted the process where it left off. (careful with this - need to ensure the leap-year variable is reset)
+#CURL Error: Failure when receiving data from the peer
+#Error in Rsx_nc4_get_vara_double: NetCDF: DAP failure
+#Var: RAINNC_rcp85  Ndims: 3   Start: 17579,0,0 Count: 8785,64,82
+#Error in ncvar_get_inner(ncid2use, varid2use, nc$var[[li]]$missval, addOffset,  : 
+#                           C function R_nc4_get_vara_double returned error
+
 # Scenarios are in separate WRF files for Hawaii and Maui, need to extract data for those as well
 #**# NOT TESTED, LIKELY HAS BUGS
 if (island == "hawaii" | island == "maui"){
   data.file = get.data.file(island, "rcp45")
+  setwd(code.dir)
   source("001_ExtractAnnual.R")
   data.file = get.data.file(island, "rcp85")
+  setwd(code.dir)
   source("001_ExtractAnnual.R")
 }
 
 
 # STEP 3: Convert extracted variables into quantities of interest
+setwd(code.dir)
 source("002b_ProcessAnnual_ppt.R")
+
+# NOTE: File paths need to exist prior to running this script - need to adjust extract annual to create
+# the DailyPPT directory as well. (currently this was manually created when I ran the script)
 
 # NOTE: WRF RAINNC variable values exceeded 100 and I_RAIN was not present for all scenarios
 # It was assumed that when the bucket dropped, any excess above 100 was carried over and not dropped
