@@ -16,6 +16,10 @@ scenario = 'present' #**# FLAG - needed for HI
 
 # Get a list of desired variables (see files in shared folder from Lauren)
 var.vec = c("RAINNC_present", "RAINNC_rcp45", "RAINNC_rcp85")
+if (island == "maui" | island == "hawaii"){
+  var.vec = c("RAINNC")
+}
+
 timesteps = c("present", "rcp45", "rcp85")
 
 # , "RAIN_rcp45", "RAIN_rcp85", , "I_RAINNC"

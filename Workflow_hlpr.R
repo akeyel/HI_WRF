@@ -230,7 +230,7 @@ calc.precip = function(x, y){
 #' inspection of the data suggests that it is likely GMT, so probably want the day to start at
 #' 11 (11 - 10 = 1). If another daily rhythm is desired, adjust day.start as needed.
 #' 
-create.daily.ppt.files = function(i, var, new.var, timestep, island){
+create.daily.ppt.files = function(i, var, new.var, timestep, island, part = 0){
   
   # https://www.geeksforgeeks.org/create-3d-array-using-the-dim-function-in-r/
   # https://www.tutorialspoint.com/r/r_arrays.htm
@@ -272,7 +272,11 @@ create.daily.ppt.files = function(i, var, new.var, timestep, island){
   }
     
   # Save the array as a data file with an array for each day
-  save(day.ppt.array, file = sprintf("Vars/%s/%s_%s/DailyPPT/DailyPPT_%s_%s_year_%s",island, var, timestep, var, timestep, i + 1989))
+  outfile = sprintf("Vars/%s/%s_%s/DailyPPT/DailyPPT_%s_%s_year_%s.rda",island, var, timestep, var, timestep, i + 1989)
+  if (part != 0){
+    outfile = sprintf("Vars/%s/%s_%s/DailyPPT/DailyPPT_%s_%s_year_%s_part_%s.rda",island, var, timestep, var, timestep, i + 1989, part)
+  }
+  save(day.ppt.array, file = outfile)
 
   # Return array objects
   return(list(day.ppt.array))

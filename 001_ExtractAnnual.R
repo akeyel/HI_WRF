@@ -31,6 +31,11 @@ for (var in var.vec){
     
   # Check if a directory exists for this variable, if not, create it and the associated sub-directories
   main.path = sprintf("Vars/%s/%s", island, var)
+  if (island == "maui" | island == "hawaii"){
+    stop("Please use 001b_ExtractAnnual.R to avoid memory issues with the extraction process
+         and for correct processing of the data structure")
+  }
+  
   if (!file.exists(main.path)){
     create.my.directories(main.path, ppt.offset)
   }
@@ -47,7 +52,7 @@ for (var in var.vec){
       n.leap.years = n.leap.years + 1
       year.timesteps = normal.year + 24 # Add an extra day
     }
-    year.end = i * normal.year + n.leap.years * 24  + TimeZone.Offset + ppt.offset
+    year.end = i * normal.year + n.leap.years * 24  + TimeZone.Offset # + ppt.offset # Should not be included - that was to get an extra hour at the beginning!
     
     
     if (year.end > length(my.ncdf$dim$Time$vals)){
@@ -57,6 +62,7 @@ for (var in var.vec){
     }
     
     new.var = ncvar_get(my.ncdf, var, start = c(1,1,year.start), count = c(-1,-1,year.timesteps))
+
     message(year.start)
     message(year.end)
     message(year.timesteps)

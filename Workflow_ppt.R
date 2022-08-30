@@ -21,8 +21,8 @@ code.dir = 'C:/Users/ak697777/University at Albany - SUNY/Elison Timm, Oliver - 
 # Data Directory
 data.dir = "C:/hawaii_local"
 
-# Choose island
-island = 'oahu'
+# Choose island (oahu, kauai, hawaii, maui)
+island = 'maui'
 
 ##### SET UP THE ANALYSIS #####
 setwd(code.dir)
@@ -52,9 +52,11 @@ if (make.grid == 1){
 }
 
 # STEP 2: Extract variables for further processing locally on R
-
-source("001_ExtractAnnual.R")
 # NOTE: We lose 10 hours of the last day of the last year of the scenario run, due to the GMT offset
+if (island == 'oahu' | island == "kauai"){
+  timestep = "present"
+  source("001_ExtractAnnual.R")
+}
 
 # Error for Kauai - just restarted the process where it left off. (careful with this - need to ensure the leap-year variable is reset)
 #CURL Error: Failure when receiving data from the peer
@@ -64,14 +66,21 @@ source("001_ExtractAnnual.R")
 #                           C function R_nc4_get_vara_double returned error
 
 # Scenarios are in separate WRF files for Hawaii and Maui, need to extract data for those as well
-#**# NOT TESTED, LIKELY HAS BUGS
 if (island == "hawaii" | island == "maui"){
-  data.file = get.data.file(island, "rcp45")
+  # Data file starts out in present from sourcing 000b_PrecipSettings.R
+  timestep = 'present'
+  source("001b_ExtractAnnual.R")
+  
   setwd(code.dir)
-  source("001_ExtractAnnual.R")
-  data.file = get.data.file(island, "rcp85")
+  timestep = "rcp45"
+  data.file = get.data.file(island, timestep)
+  source("001b_ExtractAnnual.R")
+  
   setwd(code.dir)
-  source("001_ExtractAnnual.R")
+  timestep = "rcp85"
+  data.file = get.data.file(island, timestep)
+  source("001b_ExtractAnnual.R")
+  
 }
 
 
