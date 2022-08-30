@@ -86,7 +86,12 @@ if (island == "hawaii" | island == "maui"){
 
 # STEP 3: Convert extracted variables into quantities of interest
 setwd(code.dir)
-source("002b_ProcessAnnual_ppt.R")
+if (island == "oahu" | island == "kauai"){
+  source("002b_ProcessAnnual_ppt_ko.R")
+}
+if (island == "maui" | island == "hawaii"){
+  source("002b_ProcessAnnual_ppt_hm.R")
+}
 
 # NOTE: File paths need to exist prior to running this script - need to adjust extract annual to create
 # the DailyPPT directory as well. (currently this was manually created when I ran the script)
