@@ -7,20 +7,6 @@ setwd("C:/hawaii_local")
 data.file = "https://cida.usgs.gov/thredds/dodsC/kauai"
 kauai =ncdf4::nc_open(data.file)
 
-#names(kauai$var)
-
-#[1] "ACLHF_present"  "XLAT"           "XLONG"          "Times"          "time_bnds"      "ALBBCK_present" "ALBEDO_present"
-#[8] "GLW_present"    "HFX_present"    "LH_present"     "OLR_present"    "PSFC_present"   "Q2_present"     "QFX_present"   
-#[15] "RAIN_present"   "I_RAINNC"       "RAINNC_present" "SFROFF_present" "SMOIS_present"  "DZS"            "SNOW_present"  
-#[22] "SNOWH_present"  "T2_present"     "TH2_present"    "Times_present"  "XTIME"          "TSLB_present"   "U10_present"   
-#[29] "UDROFF_present" "V10_present"    "VEGFRA_present" "ACLHF_rcp45"    "ALBBCK_rcp45"   "ALBEDO_rcp45"   "GLW_rcp45"     
-#[36] "HFX_rcp45"      "LH_rcp45"       "OLR_rcp45"      "PSFC_rcp45"     "Q2_rcp45"       "QFX_rcp45"      "RAIN_rcp45"    
-#[43] "RAINNC_rcp45"   "SFROFF_rcp45"   "SMOIS_rcp45"    "SNOW_rcp45"     "SNOWH_rcp45"    "T2_rcp45"       "TH2_rcp45"     
-#[50] "Times_rcp45"    "TSLB_rcp45"     "U10_rcp45"      "UDROFF_rcp45"   "V10_rcp45"      "VEGFRA_rcp45"   "ACLHF_rcp85"   
-#[57] "ALBBCK_rcp85"   "ALBEDO_rcp85"   "GLW_rcp85"      "HFX_rcp85"      "LH_rcp85"       "OLR_rcp85"      "PSFC_rcp85"    
-#[64] "Q2_rcp85"       "QFX_rcp85"      "RAIN_rcp85"     "RAINNC_rcp85"   "SFROFF_rcp85"   "SMOIS_rcp85"    "SNOW_rcp85"    
-#[71] "SNOWH_rcp85"    "T2_rcp85"       "TH2_rcp85"      "Times_rcp85"    "TSLB_rcp85"     "U10_rcp85"      "UDROFF_rcp85"  
-#[78] "V10_rcp85"      "VEGFRA_rcp85"
 
 print(kauai)
 length(kauai$dim$Time$vals)

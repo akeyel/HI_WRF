@@ -13,12 +13,18 @@
 #     - 
 
 
-##### SET UP THE ANALYSIS #####
-source("100_DevSettings.R") #**# May need to set working directory first
+code.dir = 'C:/Users/ak697777/University at Albany - SUNY/Elison Timm, Oliver - CCEID/HI_WRF'
 
-# Set working directory and load helper functions (adjust paths as needed)
+# Data Directory
+data.dir = "C:/hawaii_local"
+
+# Choose island (oahu, kauai, hawaii, maui)
+island = 'oahu'
+
+##### SET UP THE ANALYSIS #####
 setwd(code.dir)
 source("Workflow_hlpr.R")
+source("000a_TSettings.R")
 
 ##### Process data from web-available sources ######
 #### Process the Data #### 
@@ -39,10 +45,13 @@ if (make.grid == 1){
 }
 
 # STEP 2: Extract variables for further processing locally on R
+is.ppt = 0
+setwd(code.dir)
 source("001_ExtractAnnual.R")
 
 # STEP 3: Convert extracted variables into quantities of interest
-source("002_ProcessAnnual.R")
+setwd(code.dir)
+source("002a_ProcessAnnual_t.R")
 
 # STEP 4: Export data to GIS-friendly format (GeoTiff snapped to HI Rainfall Atlas 250 m grid)
 stop("003_ExportWRF.R has not been scripted yet")

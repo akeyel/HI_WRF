@@ -7,29 +7,15 @@
 ##### LOAD REQUIRED PACKAGES #####
 library(ncdf4)
 
-
-setwd(code.dir)
-source("Workflow_hlpr.R")
-
 # Set Island (and timepoint for Hawaii/Maui)
-scenario = 'present' #**# FLAG - needed for HI
+island = 'oahu'
+scenario = 'present'
 
 # Get a list of desired variables (see files in shared folder from Lauren)
-var.vec = c("RAINNC_present", "RAINNC_rcp45", "RAINNC_rcp85")
-if (island == "maui" | island == "hawaii"){
-  var.vec = c("RAINNC")
-}
-
-timesteps = c("present", "rcp45", "rcp85")
-
-# , "RAIN_rcp45", "RAIN_rcp85", , "I_RAINNC"
-
+var.vec = c("T2_present", "T2_rcp45", "T2_rcp85")
 #**# this will need to be adjusted for hawaii and maui
 
-is.ppt = 1
-
 # Set years to download
-#**# For now, just testing with 5 years to get the code running properly
 first.year = 1
 last.year = 20 
 

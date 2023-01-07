@@ -14,7 +14,7 @@ normal.year = 8760
 
 ppt.offset = 0
 if (is.ppt == 1){
-  # Need an extra hour point to calculate the difference relative to the prior hour in computing rainfall
+  # Need an extra hour prior to calculate the difference relative to the prior hour in computing rainfall
   normal.year = 8761
   ppt.offset = -1
 }
@@ -44,7 +44,7 @@ for (var in var.vec){
   n.leap.years = 0
   for (i in first.year:last.year){
     message(sprintf("Year %s", i + 1989))
-    year.start = (i - 1) * normal.year + 1 + n.leap.years * 24 + TimeZone.Offset + ppt.offset  # Add 24 hours for each the leap day
+    year.start = (i - 1) * (normal.year + ppt.offset) + n.leap.years * 24 + TimeZone.Offset + ppt.offset  # Add 24 hours for each the leap day # had + 1 , but this was wrong.
     year.timesteps = normal.year
     
     # Adjust for leap years (update within calculations, because a leap year will need an adjustment to the end, but not the start)
@@ -52,7 +52,8 @@ for (var in var.vec){
       n.leap.years = n.leap.years + 1
       year.timesteps = normal.year + 24 # Add an extra day
     }
-    year.end = i * normal.year + n.leap.years * 24  + TimeZone.Offset # + ppt.offset # Should not be included - that was to get an extra hour at the beginning!
+    #year.end = i * normal.year + n.leap.years * 24  + TimeZone.Offset  + ppt.offset
+    year.end = year.start + year.timesteps - 1 # -1 is to adjust for inclusion of start in the extraction
     
     
     if (year.end > length(my.ncdf$dim$Time$vals)){
@@ -60,7 +61,10 @@ for (var in var.vec){
       year.timesteps = year.end - year.start  # ODD - a +1 worked for most variables, but not for rainfall.
       warning("The end of the year is beyond the last data timestep. Timestep truncated to last available data. Extrapolation likely needed to finish out the data set")
     }
-    
+    #message("Extracting variable")
+    #message(year.start)
+    #message(year.timesteps)
+    message(Sys.time())
     new.var = ncvar_get(my.ncdf, var, start = c(1,1,year.start), count = c(-1,-1,year.timesteps))
 
     message(year.start)

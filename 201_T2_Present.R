@@ -7,34 +7,28 @@
 ##### LOAD REQUIRED PACKAGES #####
 library(ncdf4)
 
+# Code Directory
+code.dir = 'C:/Users/ak697777/University at Albany - SUNY/Elison Timm, Oliver - CCEID/HI_WRF'
 
-setwd(code.dir)
-source("Workflow_hlpr.R")
+source(sprintf("%s/workflow_hlpr.R",  code.dir))
+
+# Data Directory
+data.dir = "C:/hawaii_local"
 
 # Set Island (and timepoint for Hawaii/Maui)
-scenario = 'present' #**# FLAG - needed for HI
+island = 'oahu'
+scenario = 'present'
 
 # Get a list of desired variables (see files in shared folder from Lauren)
-var.vec = c("RAINNC_present", "RAINNC_rcp45", "RAINNC_rcp85")
-if (island == "maui" | island == "hawaii"){
-  var.vec = c("RAINNC")
-}
-
-timesteps = c("present", "rcp45", "rcp85")
-
-# , "RAIN_rcp45", "RAIN_rcp85", , "I_RAINNC"
-
-#**# this will need to be adjusted for hawaii and maui
-
-is.ppt = 1
+var.vec = c("T2_present")
 
 # Set years to download
-#**# For now, just testing with 5 years to get the code running properly
-first.year = 1
-last.year = 20 
+#**# To start, just look at one year
+first.year = 9 #1 #13 # Crashed mid-processing
+last.year =  12 #13 
 
 # Get a list of desired timescales (see file in shared folder from Lauren)
-timescales = c('daily', 'monthly', 'annual')
+timescales = c('monthly', 'annual')
 
 # Indicator for whether .csv grid indices should be generated for each island (only needs to be done once)
 make.grid = 0

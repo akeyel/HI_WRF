@@ -14,6 +14,11 @@
 #     - L. Fortini
 #     - Xiao Luo
 
+#**# TO DO
+# Need to update ppt_hm file
+# Need to update and check temperature files
+# Need to auto-generate climatology folder when making directories
+
 #**# Change as needed
 # Code Directory
 code.dir = 'C:/Users/ak697777/University at Albany - SUNY/Elison Timm, Oliver - CCEID/HI_WRF'
@@ -22,7 +27,7 @@ code.dir = 'C:/Users/ak697777/University at Albany - SUNY/Elison Timm, Oliver - 
 data.dir = "C:/hawaii_local"
 
 # Choose island (oahu, kauai, hawaii, maui)
-island = 'maui'
+island = 'kauai'
 
 ##### SET UP THE ANALYSIS #####
 setwd(code.dir)
@@ -53,6 +58,7 @@ if (make.grid == 1){
 
 # STEP 2: Extract variables for further processing locally on R
 # NOTE: We lose 10 hours of the last day of the last year of the scenario run, due to the GMT offset
+#**# ADD A CHECK IF THE FILES ALREADY EXIST, THAT CAN BE OVERRIDDEN
 if (island == 'oahu' | island == "kauai"){
   timestep = "present"
   source("001_ExtractAnnual.R")
@@ -90,8 +96,22 @@ if (island == "oahu" | island == "kauai"){
   source("002b_ProcessAnnual_ppt_ko.R")
 }
 if (island == "maui" | island == "hawaii"){
+  timescales = c(timescales, 'part')
+  # Split into pieces, to allow it to be run and moved off the computer.
+  timesteps = c("present")
+  setwd(code.dir)
   source("002b_ProcessAnnual_ppt_hm.R")
+  
+  timesteps = c("rcp45")
+  setwd(code.dir)
+  source("002b_ProcessAnnual_ppt_hm.R")
+  
+  timesteps = c("rcp85")
+  setwd(code.dir)
+  source("002b_ProcessAnnual_ppt_hm.R")
+  
 }
+
 
 # NOTE: File paths need to exist prior to running this script - need to adjust extract annual to create
 # the DailyPPT directory as well. (currently this was manually created when I ran the script)
@@ -100,6 +120,11 @@ if (island == "maui" | island == "hawaii"){
 # It was assumed that when the bucket dropped, any excess above 100 was carried over and not dropped
 # If the excess was greater than the next day's reading, an NA value was assigned.
 # We may want to reconsider this.
+
+# Convert Climatologies to .csv file to move to HI Rainfall atlas grid in ArcGIS
+setwd(code.dir)
+my.var = "RAINNC"
+source("003_Export_to_csv.R")
 
 
 #**# BELOW HERE NOT YET COMPLETED

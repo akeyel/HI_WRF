@@ -17,10 +17,21 @@ my.ncdf =ncdf4::nc_open(data.file)
 # Extract Variable Information
 normal.year = 8760
 
+# How many hours in the first 6 months of the year?
+#days =  31 + 28 + 31 + 30 +  31 + 30 + 31 + 31
+#hours = 24 * days
+hours1 = 2880 #120 days
+hours2 = 2952 #123 days (122 days remaining)
+#hours = 4344 # for Jan 1 - June 30
+
 ppt.offset = 0
+hours.ppt.offset = 0
 if (is.ppt == 1){
   # Need an extra hour point to calculate the difference relative to the prior hour in computing rainfall
-  normal.year = 8761
+  # NOTE: as calculated below, normal.year does not need to be adjusted, and can just make the adjustments more directly below.
+  normal.year = normal.year + 1
+  #hours1 = hours1 + 1
+  hours.ppt.offset = 1
   ppt.offset = -1
 }
 
@@ -50,24 +61,21 @@ for (var in var.vec){
     
     # Break year into thirds to avoid memory error
     for (j in 1:3){
-      # How many hours in the first 6 months of the year?
-      #days =  31 + 28 + 31 + 30 +  31 + 30 + 31 + 31
-      #hours = 24 * days
-      hours1 = 2880
-      hours2 = 2952
-      #hours = 4344 # for Jan 1 - June 30
       
       message(sprintf("Year %s", i + 1989))
-    
+      #**# WATCH OUT - likely need the + 1 back for temperature? May need to adjust ppt.offset or add a t.offset accordingly.
       if (j == 1){
-        year.start = (i - 1) * normal.year + 1 + n.leap.years * 24 + TimeZone.Offset + ppt.offset  # Add 24 hours for each the leap day
-        year.timesteps = hours1  }
+        #year.start = (i - 1) * normal.year + 1 + n.leap.years * 24 + TimeZone.Offset + ppt.offset  # Add 24 hours for each the leap day
+        year.start = (i - 1) * (normal.year + ppt.offset) + n.leap.years * 24 + TimeZone.Offset + ppt.offset  # Add 24 hours for each the leap day
+        year.timesteps = hours1 + hours.ppt.offset  }
       if (j == 2){
-        year.start = (i - 1) * normal.year + 1 + n.leap.years * 24 + TimeZone.Offset + ppt.offset + hours1  # Add 24 hours for each the leap day
-        year.timesteps = hours2}
+        #year.start = (i - 1) * normal.year + 1 + n.leap.years * 24 + TimeZone.Offset + ppt.offset + hours1  # Add 24 hours for each the leap day
+        year.start = (i - 1) * (normal.year + ppt.offset) + n.leap.years * 24 + TimeZone.Offset + ppt.offset + hours1
+        year.timesteps = hours2 + hours.ppt.offset}
       if (j == 3){
-        year.start = (i - 1) * normal.year + 1 + n.leap.years * 24 + TimeZone.Offset + ppt.offset + hours1 + hours2  # Add 24 hours for each the leap day
-        year.timesteps = normal.year - hours1 - hours2        
+        #year.start = (i - 1) * normal.year + 1 + n.leap.years * 24 + TimeZone.Offset + ppt.offset + hours1 + hours2  # Add 24 hours for each the leap day
+        year.start = (i - 1) * (normal.year + ppt.offset) + n.leap.years * 24 + TimeZone.Offset + ppt.offset + hours1 + hours2
+        year.timesteps = normal.year - hours1 - hours2 # + hours.ppt.offset, not needed, because normal.year is already + 1 for ppt       
       }
 
       # Adjust for leap years (update within calculations, because a leap year will need an adjustment to the end, but not the start)
@@ -76,9 +84,10 @@ for (var in var.vec){
         if (j == 1){  year.timesteps = year.timesteps + 24 } # Add an extra day 
         #if (j == 2 | j == 3){  year.start = year.start + 24 } # add an extra day before starting # Not needed - leap year has already incremented on j = 1
       }
-      if (j == 1){ year.end = (i - 1) * normal.year + n.leap.years * 24 + TimeZone.Offset + hours1   }
-      if (j == 2){ year.end = (i - 1) * normal.year + n.leap.years * 24  + TimeZone.Offset + hours1 + hours2  }
-      if (j == 3){ year.end = i * normal.year + n.leap.years * 24 + TimeZone.Offset }
+      #if (j == 1){ year.end = (i - 1) * normal.year + n.leap.years * 24 + TimeZone.Offset + hours1   }
+      #if (j == 2){ year.end = (i - 1) * normal.year + n.leap.years * 24  + TimeZone.Offset + hours1 + hours2  }
+      #if (j == 3){ year.end = i * normal.year + n.leap.years * 24 + TimeZone.Offset }
+      year.end = year.start + year.timesteps - 1
       
       if (year.end > length(my.ncdf$dim$Time$vals)){
         year.end = length(my.ncdf$dim$Time$vals)
