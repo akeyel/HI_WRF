@@ -15,10 +15,10 @@ source("Workflow_hlpr.R")
 scenario = 'present' #**# FLAG - needed for HI
 
 # Get a list of desired variables (see files in shared folder from Lauren)
-var.vec = c("RAINNC_present", "RAINNC_rcp45", "RAINNC_rcp85")
-if (island == "maui" | island == "hawaii"){
-  var.vec = c("RAINNC")
-}
+#var.vec = c("RAINNC_present", "RAINNC_rcp45", "RAINNC_rcp85")
+#if (island == "maui" | island == "hawaii"){
+#  var.vec = c("RAINNC")
+#}
 
 timesteps = c("present", "rcp45", "rcp85")
 
@@ -40,12 +40,12 @@ timescales = c('daily', 'monthly', 'annual')
 make.grid = 0
 
 # Identify data file
-data.file = get.data.file(island, scenario)
+#data.file = get.data.file(island, scenario)
 
 # Need to adjust for GMT to Local time
 # HI is GMT -10, so timestep 1 is 12:00 GMT
 # So need to start at 11, not 1 to get 12:00 local time
-TimeZone.Offset = 10
+GMT.offset = 10
 TimeZone.Label = "GMT-10"
 
 #**# IS THIS A DEV SETTING? OR JUST A SHARED VARIABLE?

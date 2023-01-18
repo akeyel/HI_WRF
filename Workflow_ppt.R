@@ -26,8 +26,13 @@ code.dir = 'C:/Users/ak697777/University at Albany - SUNY/Elison Timm, Oliver - 
 # Data Directory
 data.dir = "C:/hawaii_local"
 
-# Choose island (oahu, kauai, hawaii, maui)
-island = 'kauai'
+# Choose island (oahu, kauai, hawaii, maui) #**# Need to decide if running for all islands, or for each island separately - code is a mixture.
+#island = 'kauai'
+
+hm.vec = c('hawaii', 'maui')
+ok.vec = c('oahu', 'kauai')
+islands = c(ok.vec, hm.vec)
+#scenarios = c('present', 'rcp45', 'rcp85') # equivalent to timesteps defined in precip settings
 
 ##### SET UP THE ANALYSIS #####
 setwd(code.dir)
@@ -43,25 +48,54 @@ source("000b_PrecipSettings.R")
 
 # STEP 1: Make a data grid to export data values as points. (only needs to be run once)
 if (make.grid == 1){
-  # Open the data file
-  my.ncdf =ncdf4::nc_open(data.file)
-  
-  # This uses present temperature, and assumes all variables are on the same grid
-  setwd(data.dir)
-  grid.file = sprintf("%s_xy_grid_index.csv", island)
-  make.data.grid(my.ncdf, island, grid.file)
-  # close the netcdf
-  nc_close(my.ncdf)
-
-  setwd(code.dir)
+  for (island in islands){
+    data.file = get.data.file(island, scenario)
+    
+    # Open the data file
+    my.ncdf =ncdf4::nc_open(data.file)
+    
+    # This uses present temperature, and assumes all variables are on the same grid
+    setwd(data.dir)
+    grid.file = sprintf("%s_xy_grid_index.csv", island)
+    make.data.grid(my.ncdf, island, grid.file)
+    # close the netcdf
+    nc_close(my.ncdf)
+    
+    setwd(code.dir)
+  }
 }
 
-# STEP 2: Extract variables for further processing locally on R
+# STEP 2: Download data from USGS
+# Currently set up to run for all 4 islands - may want to adjust options to select islands.
+source("0000_Data_Downloader_v2.R") #**# NEEDS UPDATING - FUNCTIONS ARE DEFINED AFTER THEY ARE CALLED. MOVE FUNCTIONS TO Workflow_hlpr.R
+
+# STEP 3: Correct the present day scenario to account for the missing day
+setwd(code.dir)
+source("0000_Interpolate_Day.R") # Loads the functions from this script
+for (island in hm.vec){
+  base.path = sprintf("F:/hawaii_local/Vars/%s", island)
+  fix.hm.ppt.timeseries(base.path, island)
+  for (scenario in timesteps){
+    add.X.hours.hm(base.path, island, scenario, GMT.offset)
+  }
+}
+
+for (island in ok.vec){
+  base.path = sprintf("F:/hawaii_local/Vars/%s", island)
+  fix.ok.ppt.timeseries(base.path, island)
+  for (scenario in scenarios){
+    add.X.hours.ok(base.path, island, scenario, GMT.offset)
+  }
+}
+
+
+# STEP 4: Extract variables for further processing locally on R
 # NOTE: We lose 10 hours of the last day of the last year of the scenario run, due to the GMT offset
 #**# ADD A CHECK IF THE FILES ALREADY EXIST, THAT CAN BE OVERRIDDEN
-if (island == 'oahu' | island == "kauai"){
-  timestep = "present"
-  source("001_ExtractAnnual.R")
+for (island in ok.vec){
+  for (scenario in scenario.vec){
+    source("001c_ExtractAnnual_ok.R")
+  }
 }
 
 # Error for Kauai - just restarted the process where it left off. (careful with this - need to ensure the leap-year variable is reset)
@@ -72,20 +106,12 @@ if (island == 'oahu' | island == "kauai"){
 #                           C function R_nc4_get_vara_double returned error
 
 # Scenarios are in separate WRF files for Hawaii and Maui, need to extract data for those as well
-if (island == "hawaii" | island == "maui"){
+for (island in hm.vec){
+  stop("I ran this manually. Needs further adjustments to be run directly from this script. (mainly settings are hard-coded!")
+  # Not set up to batch through scenarios
   # Data file starts out in present from sourcing 000b_PrecipSettings.R
-  timestep = 'present'
-  source("001b_ExtractAnnual.R")
-  
-  setwd(code.dir)
-  timestep = "rcp45"
-  data.file = get.data.file(island, timestep)
-  source("001b_ExtractAnnual.R")
-  
-  setwd(code.dir)
-  timestep = "rcp85"
-  data.file = get.data.file(island, timestep)
-  source("001b_ExtractAnnual.R")
+  #timestep = 'present'
+  source("001c_ExtractAnnual_hm.R")
   
 }
 

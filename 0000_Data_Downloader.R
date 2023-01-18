@@ -6,8 +6,8 @@ library(ncdf4)
 source("C:/Users/ak697777/University at Albany - SUNY/Elison Timm, Oliver - CCEID/HI_WRF/Workflow_hlpr.R")
 #island = 'maui'
 island = 'hawaii'
-scenario = "rcp45" # 'present' # "rcp85" # 'rcp45'
-variable = "RAINNC" # "I_RAINNC"
+scenario = "rcp85" # 'present' # "rcp85" # 'rcp45'
+variable = "I_RAINNC" #"RAINNC" # 
 base.path = sprintf("F:/hawaii_local/Vars/%s/%s_%s/hourly", island, variable, scenario)
 dir.create(base.path, recursive = TRUE)
 data.file = get.data.file(island, scenario)
@@ -33,8 +33,8 @@ Get.Timesteps = function(my.ncdf, variable){
 # total.timesteps = 175320 # For RCP runs.
 
 # For Hawaii
-start = 86001
-end = 87000
+start = 1
+end = 1000
 total.timesteps = 175320 # For RCP runs.
 #total.timesteps = 50000
 
