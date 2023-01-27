@@ -15,29 +15,26 @@
 #gmt.offset = 10 #**# Need to take this as an input from settings
 
 setwd(sprintf("F:/hawaii_local/vars/%s", island))
+var = sprintf("rainnc_%s", scenario)
 
 # Set GMT offset
-start = gmt.offset # because you need to use the last value of the previous day for the subtraction. Timestep 10 corresponds to 9am, which is 11 pm the previous day.
+start = GMT.offset # because you need to use the last value of the previous day for the subtraction. Timestep 10 corresponds to 9am, which is 11 pm the previous day.
 end = start + 24 # Needs to include a full 24 hours worth of data
 # Need one index to track time steps and one to track file position.
 start.index = start
 end.index = end 
 file.end = 1000
-total.timesteps = 175320 + gmt.offset # Present scenario needs the extra day interpolated before running
+total.timesteps = 175320 + GMT.offset # Present scenario needs the extra day interpolated before running
 # All scenarios need an extra few hours to account for the gmt difference.
 
 days = 365
 day = 1
 year = 1990
 
-#**# Consider moving this to workflow_hlpr.R
+#**# Consider moving this to workflow_hlpr.R - repeated in 001c_ExtractAnnual_hm.R
 load.file = function(variable, scenario, file.end){
-  in.file = sprintf("%s_%s/hourly/%s_%s_%s_%s.rda", variable, scenario, island, variable, scenario, file.end)
-  # Correct for random sci notation instance
-  if (file.end == "1e+05" & !file.exists(in.file)){
-    in.file = sprintf("%s_%s/hourly/%s_%s_%s_100000.rda", variable, scenario, island, variable, scenario)
-  }
-  
+  in.file = sprintf("%s_%s/hourly/%s_%s_%s_%s.rda", variable, scenario, island, variable, scenario, format(file.end, scientific = F))
+
   load(in.file) 
   return(hourly)
 }
@@ -51,8 +48,8 @@ dim2 = dim(rainnc)[2] # should be lat
 last.hour = rainnc[,,start]
   
 while (start.index < total.timesteps){
-
-  this.day = array(0, dim = c(dims[1],dims[2], 1))
+  
+  this.day = array(0, dim = c(dim1,dim2, 1))
   for (this.step in (start + 1):end){
     # If you run out of data, get more
     if (this.step > file.end){
@@ -65,7 +62,8 @@ while (start.index < total.timesteps){
     }
     this.hour = rainnc[,,this.step]
     this.delta = this.hour - last.hour
-    this.day = this.day + this.delta
+    #**# THIS IS WRONG - NEED TO ADJUST FOR THE ROLL-OVER OF THIS VARIABLE - LOOK UP WHERE THAT WAS DONE!
+    this.day[,,1] = this.day[,,1] + this.delta
     # update the last.hour object (can't just use rainnc[,,(this.step - 1)]) because that will fail when the file rolls over.
     last.hour = this.hour
   }

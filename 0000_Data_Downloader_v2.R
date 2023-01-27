@@ -2,7 +2,6 @@
 
 library(ncdf4)
 
-# Not positive this is doing me any favors, but the downloading has been a major bottleneck, and I've been struggling with the indexing.
 source("C:/Users/ak697777/University at Albany - SUNY/Elison Timm, Oliver - CCEID/HI_WRF/Workflow_hlpr.R")
 
 #**# Need to revert loop for hawaii/maui - should have left it and copied this, but I didn't. So will need to fix that.
@@ -58,51 +57,5 @@ Get.Timesteps = function(my.ncdf, variable){
   test = ncvar_get(my.ncdf, variable, start = c(1,1,1), count = c(1,1,-1))
   total.timesteps = dim(test)
   return(total.timesteps)
-}
-
-Data.Download_hm = function(base.path, island, variable, scenario, total.timesteps, start = 1, end = 1000){
-  
-  while(start < total.timesteps){
-    timesteps = end - start + 1 # +1 because it is inclusive of start
-    hourly = ncvar_get(my.ncdf, variable, start = c(1,1,start), count = c(-1,-1,timesteps))
-    #hourly = ncvar_get(my.ncdf, variable, start = c(1,1,start), count = c(1,1,timesteps)) #**# TESTING VERSION - USE CODE ABOVE ONCE WORKING PROPERLY
-    message(start)
-    message(end)
-    message(timesteps) # Should always be 1000, except at the very end
-    save(hourly, file = sprintf("%s/%s_%s_%s_%s.rda", base.path, island, variable, scenario, end))
-    
-    start = start + 1000
-    end = end + 1000
-    if (end > total.timesteps){
-      end = total.timesteps
-    }
-      
-    if (start > 200000){
-      stop("Something appears to have gone wrong with the extraction - 200,000 timesteps reached, when the data set was expected to have <180,000")
-    }
-  }
-}
-
-Data.Download_ok = function(base.path, island, variable, total.timesteps, start = 1, end = 1000){
-  
-  while(start < total.timesteps){
-    timesteps = end - start + 1 # +1 because it is inclusive of start
-    hourly = ncvar_get(my.ncdf, variable, start = c(1,1,start), count = c(-1,-1,timesteps))
-    #hourly = ncvar_get(my.ncdf, variable, start = c(1,1,start), count = c(1,1,timesteps)) #**# TESTING VERSION - USE CODE ABOVE ONCE WORKING PROPERLY
-    message(start)
-    message(end)
-    message(timesteps) # Should always be 1000, except at the very end
-    save(hourly, file = sprintf("%s/%s_%s_%s.rda", base.path, island, variable, end))
-    
-    start = start + 1000
-    end = end + 1000
-    if (end > total.timesteps){
-      end = total.timesteps
-    }
-    
-    if (start > 200000){
-      stop("Something appears to have gone wrong with the extraction - 200,000 timesteps reached, when the data set was expected to have <180,000")
-    }
-  }
 }
 

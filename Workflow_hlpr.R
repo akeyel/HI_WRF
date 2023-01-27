@@ -504,7 +504,7 @@ calculate.min.max.mean.monthly = function(daily.stuff, i, var, is.leap){
 #' @param var The variable being examined
 #' @param is.leap an indicator for whether or not the year is a leap year
 #' 
-calculate.mean.monthly.ppt = function(daily.stuff, i, var,timestep, is.leap, island){
+calculate.mean.monthly.ppt = function(daily.stuff, i, var,timestep, is.leap, island, data.dir = "F:/hawaii_local"){
 
   days.in.month = c(31,28,31,30,31,30,31,31,30,31,30,31)
   if (is.leap == 1){
@@ -535,24 +535,24 @@ calculate.mean.monthly.ppt = function(daily.stuff, i, var,timestep, is.leap, isl
       }
     }    
     mean.month.array = apply(daily.stuff[,,month.starts[j]:month.ends[j]], c(1,2), mean)
-    save(mean.month.array, file = sprintf("Vars/%s/%s_%s/MonthlyMeans/%s_%s_%s_mean_ppt.rda", island, var, timestep, var, i, j))
+    save(mean.month.array, file = sprintf("%s/Vars/%s/%s_%s/MonthlyMeans/%s_%s_%s_mean_ppt.rda", data.dir, island, var, timestep, var, i, j))
   }
 }
 
 #' Calculate monthly climatology
-calculate.monthly.climatologies = function(start.year, end.year, var, timestep, island){
+calculate.monthly.climatologies = function(start.year, end.year, var, timestep, island, data.dir = "F:/hawaii_local"){
   
   days.in.typical.month = c(31,28,31,30,31,30,31,31,30,31,30,31)
   
   for (j in 1:12){
-    mean.monthly.path = sprintf("Vars/%s/%s_%s/MonthlyMeans/%s_%s_%s_mean_ppt.rda", island, var, timestep, var, start.year, j)
+    mean.monthly.path = sprintf("%s/Vars/%s/%s_%s/MonthlyMeans/%s_%s_%s_mean_ppt.rda", data.dir, island, var, timestep, var, start.year, j)
     #print(mean.monthly.path)
     load(mean.monthly.path) # loads the mean.month.array object
     climatology = mean.month.array
     # Prevent accidental reuse of the object
     rm(mean.month.array)
     for (i in (start.year + 1):end.year){
-      load(sprintf("Vars/%s/%s_%s/MonthlyMeans/%s_%s_%s_mean_ppt.rda", island, var, timestep, var, i, j)) # loads the mean.month.array object
+      load(sprintf("%s/Vars/%s/%s_%s/MonthlyMeans/%s_%s_%s_mean_ppt.rda", data.dir, island, var, timestep, var, i, j)) # loads the mean.month.array object
       climatology = climatology + mean.month.array
       # Prevent accidental re-use of the object
       rm(mean.month.array)
@@ -564,7 +564,7 @@ calculate.monthly.climatologies = function(start.year, end.year, var, timestep, 
     # Replace NA values with interpolated values #**# Long-term - should look into why NA's are even happening in the first place.
     climatology = interpolate.nas(climatology)
     
-    save(climatology, file = sprintf("Vars/%s/%s_%s/Climatology/%s_month_%s.rda", island, var, timestep, var, j))
+    save(climatology, file = sprintf("%s/Vars/%s/%s_%s/Climatology/%s_month_%s.rda", data.dir, island, var, timestep, var, j))
   }
 }
 
@@ -595,7 +595,7 @@ interpolate.nas = function(climatology){
 #' @param var The variable being examined
 #' @param is.leap an indicator for whether or not the year is a leap year
 #' 
-calculate.mean.annual.ppt = function(daily.stuff, i, var, timestep, is.leap, island){
+calculate.mean.annual.ppt = function(daily.stuff, i, var, timestep, is.leap, island, data.dir = "F:/hawaii_local"){
   
   days = 365
   if (is.leap == 1){
@@ -604,24 +604,25 @@ calculate.mean.annual.ppt = function(daily.stuff, i, var, timestep, is.leap, isl
   
   if (i == 20){
     if (dim(daily.stuff)[3] < days){
-      days = dim(daily.stuff)[3]
-      warning(sprintf("Days adjusted for year %s to %s. One day's loss due to GMT offset was expected.", (i + 1989), days))
+      stop("Fewer days in the daily file than expected")
+      #days = dim(daily.stuff)[3]
+      #warning(sprintf("Days adjusted for year %s to %s. One day's loss due to GMT offset was expected.", (i + 1989), days))
     }
   }
   
   mean.annual.array = apply(daily.stuff[,,1:days], c(1,2), mean)
-  save(mean.annual.array, file = sprintf("Vars/%s/%s_%s/AnnualMeans/%s_%s_mean_ppt.rda", island, var, timestep, var, i))
+  save(mean.annual.array, file = sprintf("%s/Vars/%s/%s_%s/AnnualMeans/%s_%s_mean_ppt.rda", data.dir, island, var, timestep, var, i))
     
 }
 
 #' Calculate annual climatology
-calculate.annual.climatologies = function(start.year, end.year, var, timestep, island){
-  load(sprintf("Vars/%s/%s_%s/AnnualMeans/%s_%s_mean_ppt.rda", island, var, timestep, var, start.year)) # loads the mean.annual.array object
+calculate.annual.climatologies = function(start.year, end.year, var, timestep, island, data.dir = "F:/hawaii_local"){
+  load(sprintf("%s/Vars/%s/%s_%s/AnnualMeans/%s_%s_mean_ppt.rda", data.dir, island, var, timestep, var, start.year)) # loads the mean.annual.array object
   climatology = mean.annual.array
   # Prevent accidental reuse of the object
   rm(mean.annual.array)
   for (i in (start.year + 1):end.year){
-    load(sprintf("Vars/%s/%s_%s/AnnualMeans/%s_%s_mean_ppt.rda", island, var, timestep, var, i)) # loads the mean.month.array object
+    load(sprintf("%s/Vars/%s/%s_%s/AnnualMeans/%s_%s_mean_ppt.rda", data.dir, island, var, timestep, var, i)) # loads the mean.month.array object
     climatology = climatology + mean.annual.array
     # Prevent accidental re-use of the object
     rm(mean.annual.array)
@@ -635,7 +636,7 @@ calculate.annual.climatologies = function(start.year, end.year, var, timestep, i
   # Remove any NA values through interpolation to avoid problems later on.
   climatology = interpolate.nas(climatology)
   
-  save(climatology, file = sprintf("Vars/%s/%s_%s/Climatology/%s_Annual.rda", island, var, timestep, var))
+  save(climatology, file = sprintf("%s/Vars/%s/%s_%s/Climatology/%s_Annual.rda", data.dir, island, var, timestep, var))
 }
 
 
@@ -717,3 +718,60 @@ convert.to.csv = function(current.values, out.file, island.grid, int100 = FALSE)
   
 }
 
+#' Data downloader for Hawaii and Maui
+#' 
+Data.Download_hm = function(base.path, island, variable, scenario, total.timesteps, start = 1, end = 1000){
+  
+  while(start < total.timesteps){
+    timesteps = end - start + 1 # +1 because it is inclusive of start
+    hourly = ncvar_get(my.ncdf, variable, start = c(1,1,start), count = c(-1,-1,timesteps))
+    #hourly = ncvar_get(my.ncdf, variable, start = c(1,1,start), count = c(1,1,timesteps)) #**# TESTING VERSION - USE CODE ABOVE ONCE WORKING PROPERLY
+    message(start)
+    message(end)
+    message(timesteps) # Should always be 1000, except at the very end
+    save(hourly, file = sprintf("%s/%s_%s_%s_%s.rda", base.path, island, variable, scenario, end))
+    
+    start = start + 1000
+    end = end + 1000
+    if (end > total.timesteps){
+      end = total.timesteps
+    }
+    
+    if (start > 200000){
+      stop("Something appears to have gone wrong with the extraction - 200,000 timesteps reached, when the data set was expected to have <180,000")
+    }
+  }
+}
+
+#' Data downloader for Oahu and Kauai
+#' 
+Data.Download_ok = function(base.path, island, variable, total.timesteps, start = 1, end = 1000){
+  
+  while(start < total.timesteps){
+    timesteps = end - start + 1 # +1 because it is inclusive of start
+    hourly = ncvar_get(my.ncdf, variable, start = c(1,1,start), count = c(-1,-1,timesteps))
+    #hourly = ncvar_get(my.ncdf, variable, start = c(1,1,start), count = c(1,1,timesteps)) #**# TESTING VERSION - USE CODE ABOVE ONCE WORKING PROPERLY
+    message(start)
+    message(end)
+    message(timesteps) # Should always be 1000, except at the very end
+    save(hourly, file = sprintf("%s/%s_%s_%s.rda", base.path, island, variable, end))
+    
+    start = start + 1000
+    end = end + 1000
+    if (end > total.timesteps){
+      end = total.timesteps
+    }
+    
+    if (start > 200000){
+      stop("Something appears to have gone wrong with the extraction - 200,000 timesteps reached, when the data set was expected to have <180,000")
+    }
+  }
+}
+
+#' Replace bad day in the daily data for Maui with prior day
+#' 
+fix.maui.ppt.2007.365 = function(base.path){
+  load(sprintf("%s/DailyPPT_rainnc_rcp45_year_2007.rda", base.path)) # Loads the day.ppt.array
+  day.ppt.array[,,365] = day.ppt.array[,,364]
+  save(day.ppt.array, file = sprintf("%s/DailyPPT_rainnc_rcp45_year_2007.rda", base.path))
+}

@@ -24,7 +24,7 @@
 code.dir = 'C:/Users/ak697777/University at Albany - SUNY/Elison Timm, Oliver - CCEID/HI_WRF'
 
 # Data Directory
-data.dir = "C:/hawaii_local"
+data.dir = "F:/hawaii_local"
 
 # Choose island (oahu, kauai, hawaii, maui) #**# Need to decide if running for all islands, or for each island separately - code is a mixture.
 #island = 'kauai'
@@ -67,90 +67,96 @@ if (make.grid == 1){
 
 # STEP 2: Download data from USGS
 # Currently set up to run for all 4 islands - may want to adjust options to select islands.
-source("0000_Data_Downloader_v2.R") #**# NEEDS UPDATING - FUNCTIONS ARE DEFINED AFTER THEY ARE CALLED. MOVE FUNCTIONS TO Workflow_hlpr.R
+download.data = 0 #**# Move this to settings
+if (download.data == 1){
+  source("0000_Data_Downloader_v2.R") #**# 
+}
 
 # STEP 3: Correct the present day scenario to account for the missing day
-setwd(code.dir)
-source("0000_Interpolate_Day.R") # Loads the functions from this script
-for (island in hm.vec){
-  base.path = sprintf("F:/hawaii_local/Vars/%s", island)
-  fix.hm.ppt.timeseries(base.path, island)
-  for (scenario in timesteps){
-    add.X.hours.hm(base.path, island, scenario, GMT.offset)
+interpolate.day = 0
+if (interpolate.day == 1){
+
+  setwd(code.dir)
+  source("0000_Interpolate_Day.R") # Loads the functions from this script
+  for (island in hm.vec){
+    base.path = sprintf("F:/hawaii_local/Vars/%s", island)
+    fix.hm.ppt.timeseries(base.path, island)
+    for (scenario in timesteps){
+      add.X.hours.hm(base.path, island, scenario, GMT.offset)
+    }
+  }
+  
+  for (island in ok.vec){
+    base.path = sprintf("F:/hawaii_local/Vars/%s", island)
+    fix.ok.ppt.timeseries(base.path, island)
+    for (scenario in timesteps){
+      add.X.hours.ok(base.path, island, scenario, GMT.offset)
+    }
   }
 }
 
-for (island in ok.vec){
-  base.path = sprintf("F:/hawaii_local/Vars/%s", island)
-  fix.ok.ppt.timeseries(base.path, island)
-  for (scenario in scenarios){
-    add.X.hours.ok(base.path, island, scenario, GMT.offset)
-  }
-}
-
+# STEP 3B: Replace e05 data files with 100000
+#**# NEEDS SCRIPTING - I've just done this manually, while looking through the folders to make sure everything was correct.
+#**# Can script it out for temperature
+#**# Instead, backfill format(file.end, scientific = F) to the generator scripts, and prevent it from being generated in the first place
 
 # STEP 4: Extract variables for further processing locally on R
-# NOTE: We lose 10 hours of the last day of the last year of the scenario run, due to the GMT offset
-#**# ADD A CHECK IF THE FILES ALREADY EXIST, THAT CAN BE OVERRIDDEN
 for (island in ok.vec){
-  for (scenario in scenario.vec){
+  for (scenario in timesteps){
+    setwd(code.dir)
     source("001c_ExtractAnnual_ok.R")
   }
 }
 
-# Error for Kauai - just restarted the process where it left off. (careful with this - need to ensure the leap-year variable is reset)
-#CURL Error: Failure when receiving data from the peer
-#Error in Rsx_nc4_get_vara_double: NetCDF: DAP failure
-#Var: RAINNC_rcp85  Ndims: 3   Start: 17579,0,0 Count: 8785,64,82
-#Error in ncvar_get_inner(ncid2use, varid2use, nc$var[[li]]$missval, addOffset,  : 
-#                           C function R_nc4_get_vara_double returned error
-
 # Scenarios are in separate WRF files for Hawaii and Maui, need to extract data for those as well
 for (island in hm.vec){
-  stop("I ran this manually. Needs further adjustments to be run directly from this script. (mainly settings are hard-coded!")
-  # Not set up to batch through scenarios
-  # Data file starts out in present from sourcing 000b_PrecipSettings.R
-  #timestep = 'present'
-  source("001c_ExtractAnnual_hm.R")
-  
+  for (scenario in timesteps){
+    setwd(code.dir)
+    source("001c_ExtractAnnual_hm.R")
+  }
 }
 
-
-# STEP 3: Convert extracted variables into quantities of interest
-setwd(code.dir)
-if (island == "oahu" | island == "kauai"){
-  source("002b_ProcessAnnual_ppt_ko.R")
-}
-if (island == "maui" | island == "hawaii"){
-  timescales = c(timescales, 'part')
-  # Split into pieces, to allow it to be run and moved off the computer.
-  timesteps = c("present")
-  setwd(code.dir)
-  source("002b_ProcessAnnual_ppt_hm.R")
-  
-  timesteps = c("rcp45")
-  setwd(code.dir)
-  source("002b_ProcessAnnual_ppt_hm.R")
-  
-  timesteps = c("rcp85")
-  setwd(code.dir)
-  source("002b_ProcessAnnual_ppt_hm.R")
-  
+# STEP 5: Fix known errors in the daily data set
+do.corrections = 0
+if (do.corrections == 1){
+  base.path = "F:/hawaii_local/Vars/maui/RAINNC_rcp45/DailyPPT"
+  fix.maui.ppt.2007.365(base.path)
 }
 
+# STEP 5B: Do basic quality control to check for unrealistic values
+#**# NEEDS SCRIPTING/THINKING
 
-# NOTE: File paths need to exist prior to running this script - need to adjust extract annual to create
-# the DailyPPT directory as well. (currently this was manually created when I ran the script)
+# STEP 6: Create annual and monthly aggregates and climataologies
+#**# Watch for file path issues - need to make sure required folders are created as needed
+for (island in islands){
+  # Loop through scenarios
+  for (timestep in timesteps){
+    setwd(code.dir)
+    base.path = sprintf("%s/Vars/%s/RAINNC_%s/DailyPPT", data.dir, island, timestep)
+    source("002b_ProcessAnnual_ppt.R")
+  }
+}
 
-# NOTE: WRF RAINNC variable values exceeded 100 and I_RAIN was not present for all scenarios
-# It was assumed that when the bucket dropped, any excess above 100 was carried over and not dropped
-# If the excess was greater than the next day's reading, an NA value was assigned.
-# We may want to reconsider this.
+# STEP 7: Convert annual and monthly climatologies to CSV to convert to Raster
+for (island in islands){
+  # Loop through scenarios
+  for (timestep in timesteps){
+    setwd(code.dir)
+    this.var = "RAINNC"
+    source("003_Export_to_csv.R")
+  }
+}
+
+# STEP 7B: For Now, use the CSV to Raster (batch) tool to convert the climatologies to IDW interpolated rasters
+
+# STEP 8: Convert each day to csv, and then to raster
+
+
+
+#**# BELOW HERE NEEDS UPDATING / DELETING
+
 
 # Convert Climatologies to .csv file to move to HI Rainfall atlas grid in ArcGIS
-setwd(code.dir)
-my.var = "RAINNC"
-source("003_Export_to_csv.R")
 
 
 #**# BELOW HERE NOT YET COMPLETED
