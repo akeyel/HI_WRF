@@ -179,6 +179,9 @@ create.daily.files = function(i, var, leap.years, new.var, day.start){
   return(list(min.day.array, max.day.array, mean.day.array))
 }
 
+# calc.precip(90,30) # 60 - as expected
+# calc.precip(30,90) # 40 - this is as desired - 30 for current day, and 10 for roll-over
+# calc.precip(30,110) # 20 - this is as designed - it assumes all the prior rainfall rolled over, and 10 was from prior rainfall.
 
 #' Calculate Precipitation
 #'
@@ -211,8 +214,9 @@ calc.precip = function(x, y){
       out = x - y
       # Create an upper limit for the number of while loops. This should never be reached.
       count = count + 1
-      if (count == 5){
+      if (count == 100){
         out = NA
+        message("Counter exceeded 100 for rainnc, and that means either an error occurred, or the rainnc vale was >10000, which should not happen")
         break
       }
     }
@@ -506,6 +510,11 @@ calculate.min.max.mean.monthly = function(daily.stuff, i, var, is.leap){
 #' 
 calculate.mean.monthly.ppt = function(daily.stuff, i, var,timestep, is.leap, island, data.dir = "F:/hawaii_local"){
 
+  month.path = sprintf("%s/Vars/%s/%s_%s/MonthlyMeans",data.dir, island, var, timestep)
+  if (!file.exists(month.path)){
+    dir.create(month.path)
+  }
+  
   days.in.month = c(31,28,31,30,31,30,31,31,30,31,30,31)
   if (is.leap == 1){
     days.in.month[2] = 29 # Add an extra day in February
@@ -535,12 +544,17 @@ calculate.mean.monthly.ppt = function(daily.stuff, i, var,timestep, is.leap, isl
       }
     }    
     mean.month.array = apply(daily.stuff[,,month.starts[j]:month.ends[j]], c(1,2), mean)
-    save(mean.month.array, file = sprintf("%s/Vars/%s/%s_%s/MonthlyMeans/%s_%s_%s_mean_ppt.rda", data.dir, island, var, timestep, var, i, j))
+    save(mean.month.array, file = sprintf("%s/%s_%s_%s_mean_ppt.rda", month.path, var, i, j))
   }
 }
 
 #' Calculate monthly climatology
 calculate.monthly.climatologies = function(start.year, end.year, var, timestep, island, data.dir = "F:/hawaii_local"){
+  
+  clim.path = sprintf("%s/Vars/%s/%s_%s/Climatology", data.dir, island, var, timestep)
+  if (!file.exists(clim.path)){
+    dir.create(clim.path)
+  }
   
   days.in.typical.month = c(31,28,31,30,31,30,31,31,30,31,30,31)
   
@@ -564,7 +578,7 @@ calculate.monthly.climatologies = function(start.year, end.year, var, timestep, 
     # Replace NA values with interpolated values #**# Long-term - should look into why NA's are even happening in the first place.
     climatology = interpolate.nas(climatology)
     
-    save(climatology, file = sprintf("%s/Vars/%s/%s_%s/Climatology/%s_month_%s.rda", data.dir, island, var, timestep, var, j))
+    save(climatology, file = sprintf("%s/%s_month_%s.rda", clim.path, var, j))
   }
 }
 
@@ -597,6 +611,11 @@ interpolate.nas = function(climatology){
 #' 
 calculate.mean.annual.ppt = function(daily.stuff, i, var, timestep, is.leap, island, data.dir = "F:/hawaii_local"){
   
+  ann.path = sprintf("%s/Vars/%s/%s_%s/AnnualMeans", data.dir, island, var, timestep)
+  if (!file.exists(ann.path)){
+    dir.create(ann.path)
+  }
+  
   days = 365
   if (is.leap == 1){
     days = 366
@@ -611,12 +630,18 @@ calculate.mean.annual.ppt = function(daily.stuff, i, var, timestep, is.leap, isl
   }
   
   mean.annual.array = apply(daily.stuff[,,1:days], c(1,2), mean)
-  save(mean.annual.array, file = sprintf("%s/Vars/%s/%s_%s/AnnualMeans/%s_%s_mean_ppt.rda", data.dir, island, var, timestep, var, i))
+  save(mean.annual.array, file = sprintf("%s/%s_%s_mean_ppt.rda", ann.path, var, i))
     
 }
 
 #' Calculate annual climatology
 calculate.annual.climatologies = function(start.year, end.year, var, timestep, island, data.dir = "F:/hawaii_local"){
+
+  clim.path = sprintf("%s/Vars/%s/%s_%s/Climatology", data.dir, island, var, timestep)
+  if (!file.exists(clim.path)){
+    dir.create(clim.path)
+  }
+  
   load(sprintf("%s/Vars/%s/%s_%s/AnnualMeans/%s_%s_mean_ppt.rda", data.dir, island, var, timestep, var, start.year)) # loads the mean.annual.array object
   climatology = mean.annual.array
   # Prevent accidental reuse of the object
@@ -636,7 +661,7 @@ calculate.annual.climatologies = function(start.year, end.year, var, timestep, i
   # Remove any NA values through interpolation to avoid problems later on.
   climatology = interpolate.nas(climatology)
   
-  save(climatology, file = sprintf("%s/Vars/%s/%s_%s/Climatology/%s_Annual.rda", data.dir, island, var, timestep, var))
+  save(climatology, file = sprintf("%s/%s_Annual.rda", clim.path, var))
 }
 
 
@@ -770,7 +795,7 @@ Data.Download_ok = function(base.path, island, variable, total.timesteps, start 
 
 #' Replace bad day in the daily data for Maui with prior day
 #' 
-fix.maui.ppt.2007.365 = function(base.path){
+fix.ppt.2007.365 = function(base.path){
   load(sprintf("%s/DailyPPT_rainnc_rcp45_year_2007.rda", base.path)) # Loads the day.ppt.array
   day.ppt.array[,,365] = day.ppt.array[,,364]
   save(day.ppt.array, file = sprintf("%s/DailyPPT_rainnc_rcp45_year_2007.rda", base.path))

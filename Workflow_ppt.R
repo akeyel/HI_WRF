@@ -43,6 +43,9 @@ source("Workflow_hlpr.R")
 # Load settings to run the precipitation analysis
 source("000b_PrecipSettings.R")
 
+# Load interpolation function
+source("007_Spatial_Interpolate.R")
+
 ##### Process data from web-available sources ######
 #### Process the Data #### 
 
@@ -104,6 +107,7 @@ if (interpolate.day == 1){
 for (island in ok.vec){
   for (scenario in timesteps){
     setwd(code.dir)
+    message(sprintf("%s: %s", island, scenario))
     source("001c_ExtractAnnual_ok.R")
   }
 }
@@ -120,7 +124,10 @@ for (island in hm.vec){
 do.corrections = 0
 if (do.corrections == 1){
   base.path = "F:/hawaii_local/Vars/maui/RAINNC_rcp45/DailyPPT"
-  fix.maui.ppt.2007.365(base.path)
+  fix.ppt.2007.365(base.path)
+  # Same problem with negative values occurred in the Hawaii data set
+  base.path = "F:/hawaii_local/Vars/hawaii/RAINNC_rcp45/DailyPPT"
+  fix.ppt.2007.365(base.path)
 }
 
 # STEP 5B: Do basic quality control to check for unrealistic values
@@ -131,6 +138,7 @@ if (do.corrections == 1){
 for (island in islands){
   # Loop through scenarios
   for (timestep in timesteps){
+    message(sprintf("Running for %s %s", island, timestep))
     setwd(code.dir)
     base.path = sprintf("%s/Vars/%s/RAINNC_%s/DailyPPT", data.dir, island, timestep)
     source("002b_ProcessAnnual_ppt.R")
@@ -139,30 +147,31 @@ for (island in islands){
 
 # STEP 7: Convert annual and monthly climatologies to CSV to convert to Raster
 for (island in islands){
+  message(island)
   # Loop through scenarios
   for (timestep in timesteps){
+    message(timestep)
     setwd(code.dir)
     this.var = "RAINNC"
-    source("003_Export_to_csv.R")
+    source("003_Export_to_csv.R") # Also converts to .tif using the run.interpolation function
   }
 }
 
-# STEP 7B: For Now, use the CSV to Raster (batch) tool to convert the climatologies to IDW interpolated rasters
-
 # STEP 8: Convert each day to csv, and then to raster
+for (island in islands){
+  message(island)
+  for(timestep in timesteps){
+    message(timestep)
+    setwd(code.dir)
+    this.var = "RAINNC"
+    base.path = "F:/hawaii_local/Vars"
+    start.year = 1990
+    end.year = 2009
+    source("Daily_to_geotif.R")
+  }
+}
 
 
-
-#**# BELOW HERE NEEDS UPDATING / DELETING
-
-
-# Convert Climatologies to .csv file to move to HI Rainfall atlas grid in ArcGIS
-
-
-#**# BELOW HERE NOT YET COMPLETED
-
-# STEP 4:Quality Control: Check a subset of data for plausibility
-#     # REQUIRES THE FOLLOWING STEPS TO BE TAKEN IN ARCGIS:
 
 # STEP 5: Quality Control: Compare present-day WRF to Hawaii Rainfall Atlas
 

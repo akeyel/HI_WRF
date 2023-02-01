@@ -121,9 +121,9 @@ while (start.index < total.timesteps){
     save(day.ppt.array, file = daily.file)
     message(sprintf("Year %s completed", year))
 
-    if (year == 2007){
-      stop("Trying to figure out the negative rainfall thing.")
-    }
+    #if (year == 2007){
+    #  stop("Trying to figure out the negative rainfall thing.")
+    #}
         
     # reset the annual counters
     day = 0 # This will immediately increment to 1 below.
