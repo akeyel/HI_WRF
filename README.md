@@ -23,7 +23,4 @@ GIS users.
 
 - Need to process 3D data to look at surface water interception
   * Waiting on an external hard-drive for this 
-  
-- Need to look into using Python to convert rasters from Lambert projection to WGS84
-
-- Need to look into options for making data available to GIS users
+ 
