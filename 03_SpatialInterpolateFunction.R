@@ -24,7 +24,7 @@ library(gstat)
 #' @param n.neighbors the number of neighboring points to use. ArcGIS defaults to 12, so this defaults to 12 to match
 #' @param power The power to use. A standard IDW drops off with distance squared.
 #' 
-run.interpolation = function(csv.path, tif.path, in.csv, template.raster, n.neighbors = 12, power = 2){
+run.interpolation = function(csv.path, tif.path, in.csv, template.raster, n.neighbors = 12, power = 2, to.integer = 0){
   # Setup stuff
   #setwd(base.path)
   #tif.path = sprintf("%s/tif", base.path)
@@ -44,7 +44,15 @@ run.interpolation = function(csv.path, tif.path, in.csv, template.raster, n.neig
   nn = interpolate(template.raster, gs, debug.level = 0)
   in.csv.base = substr(in.csv, 1, nchar(in.csv) - 4) # Scrub off the file extension
   out.file = sprintf("%s/%s.tif", tif.path, in.csv.base)
-  x <- writeRaster(nn[[1]], out.file, overwrite=TRUE) # [[1]] makes it a single band raster with the interpolated values
+  #out.file = sprintf("%s/%s_test2.tif", tif.path, in.csv.base)
+  if (to.integer == 0){
+    # Save with full data resolution
+    x <- writeRaster(nn[[1]], out.file, overwrite=TRUE) # [[1]] makes it a single band raster with the interpolated values
+  }else{
+    # Save as a 4byte unsigned integer to make the file size smaller
+    out.rast = round(nn[[1]]*100, 0)
+    x <- writeRaster(out.rast, out.file, overwrite=TRUE, datatype = "INT4U") # [[1]] makes it a single band raster with the interpolated values
+  }
   # Done!
 }
 

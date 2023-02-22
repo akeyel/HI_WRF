@@ -1,0 +1,181 @@
+# Assorted patches to bring data structure in line with code changes that occurred after processing
+
+patch.kauai.folders = 0
+if (patch.kauai.folders == 1){
+  base.path = "F:/hawaii_local/Vars/kauai/RAINNC_present/DailyPPT"
+  new.path = sprintf("%s/tif", base.path)
+  dir.create(new.path)
+
+  for (i in 1990:2009){
+    year.path = sprintf("%s/%s", new.path, i)
+    dir.create(year.path, showWarnings = FALSE)
+    this.dir = sprintf("%s/CSV_for_Tifs/%s/tif", base.path, i)
+    
+    # Read in files that need to be moved and rename them.
+    for (a.file in list.files(this.dir)){
+      in.file = sprintf("%s/%s", this.dir, a.file)
+      out.file = sprintf("%s/%s", year.path, a.file)
+      file.rename(in.file, out.file)
+    }
+  }
+}
+
+
+#' Look at the timing between re-interpolating from .csv vs. reading in, rounding and saving from raster.
+#' I expect the latter to be faster, by a reasonable amount, but if it's not, I'll just re-process everything.
+timing.run = 0
+if (timing.run == 1){
+  
+  base.path = 'F:/hawaii_local/Vars/kauai/RAINNC_present/DailyPPT'
+  
+  # Timing loop
+  for (task in c('interpolate', 'read_round')){
+    print(task)
+    start = Sys.time()
+    numbs = numbs = c(1,2) # seq(1,10)
+    for (i in numbs){
+      #in.file = sprintf("%s/")      
+      # Interpolation loop
+      if (task == 'interpolate'){
+        csv.path = sprintf("%s/CSV_for_Tifs/1990", base.path)
+        tif.path = sprintf("%s/time_test_%s", base.path, task)
+        in.csv = sprintf("DailyPPT_RAINNC_present_1990_0%02.f.csv", i)
+        template.raster = rast("F:/hawaii_local/Vars/grids/templates/kauai_template.tif")
+        run.interpolation(csv.path, tif.path, in.csv, template.raster, n.neighbors = 12, power = 2, to.integer = 1)
+      }
+      # read and write loop
+      if (task == 'read_round'){
+        in.file = sprintf("%s/tif/1990/DailyPPT_RAINNC_present_1990_0%02.f.tif", base.path, i)
+        out.rast = rast(in.file)
+        out.file = sprintf("%s/time_test_read_round/DailyPPT_RAINNC_present_1990_0%02.f.tif", base.path, i)
+        out.rast = round(out.rast[[1]]*100, 0)
+        x <- writeRaster(out.rast, out.file, overwrite=TRUE, datatype = "INT4U") # [[1]] makes it a single band raster with the interpolated values
+      }
+    }
+    end = Sys.time()
+    elapsed = end - start
+    print(elapsed)
+  }
+}
+
+# Fill in the missing leap days that were accidentally left off the initial csv processing run due to a bug in the leap year processing
+# Copied and pasted from 12_Daily2geotif.R then modified.
+#**# LEFT OFF ADAPTING THIS - NEED TO ADJUST IT TO JUST RUN FOR THE LEAP DAYS
+add.leap.days = 0
+if (add.leap.days == 1){
+  base.path = "F:/hawaii_local/Vars"
+  this.var = "RAINNC"
+  islands = c("kauai", 'oahu', 'maui', 'hawaii')
+  timesteps = c("present", 'rcp45', 'rcp85')
+  years = c(1992, 1996, 2000, 2004, 2008)
+  for (island in islands){
+    for (timestep in timesteps){
+      var = sprintf("%s_%s", this.var, timestep)
+      island.grid = sprintf("%s/grids/wrf_grids/%s_xy_grid_index.csv", base.path, island)
+      template.raster.file = sprintf("%s/grids/templates/%s_template.tif", base.path, island)
+      template.raster = terra::rast(template.raster.file)
+      
+      # Loop through year files
+      for (year in years){
+        message(sprintf("Now processing %s", year))
+        daily.path = sprintf("%s/%s/%s/DailyPPT", base.path, island, var)
+        out.folder = sprintf("%s/CSV_for_Tifs/%s", daily.path, year)
+        tif.path = sprintf("%s/tif/%s", daily.path, year)
+        if (!file.exists(out.folder)){
+          dir.create(out.folder, recursive = TRUE)
+        }
+        if (!file.exists(tif.path)){
+          dir.create(tif.path, recursive = TRUE)
+        }
+        
+        
+        # For each year
+        in.file = sprintf("%s/DailyPPT_%s_year_%s.rda", daily.path, var, year)
+        
+        load(in.file) # loads the day.ppt.array object
+        
+        # Loop through days in the year
+        day = 366
+        csv.file = sprintf("DailyPPT_%s_%s_%03.f.csv", var, year, day)
+        csv.file.full = sprintf("%s/%s",out.folder, csv.file)
+        
+        # Subset out to that particular day
+        current.values = day.ppt.array[,,day]
+        
+        # Export to .csv
+        convert.to.csv(current.values, csv.file.full, island.grid, int100 = FALSE)
+        # Originally, plan was to multiply by 100 and convert to integer to save space. However,
+        # Rounding to nearest 100 is undone in ArcGIS during interpolation, and does not save much space in the .csv (<20%)
+        # Also, .csv's can be deleted after the raster files are created if space is an issue.
+        
+        #**# Need to change the structuring - I don't like that the tif folder has to be nested in the .csv folder. Would rather they were parallel to each other.
+        # Run interpolation
+        run.interpolation(out.folder, tif.path, csv.file, template.raster, n.neighbors = 12, power = 2) # , to.integer = 1 This is patching the original run, so that I can systematically convert those files to the integer.
+      }
+    }
+  }
+}
+
+# Patch to correct naming bug (these are the mistakes that kill my progress as a scientist!)
+remove_test2 = 0
+if (remove_test2 == 1){
+  base.path = "F:/hawaii_local/Vars"
+  this.var = "RAINNC"
+  islands = c("kauai", 'oahu', 'maui', 'hawaii')
+  timesteps = c("present", 'rcp45', 'rcp85')
+  years = c(1992, 1996, 2000, 2004, 2008)
+  for (island in islands){
+    for (timestep in timesteps){
+      var = sprintf("%s_%s", this.var, timestep)
+
+      # Loop through year files
+      for (year in years){
+        message(sprintf("Now processing %s", year))
+        daily.path = sprintf("%s/%s/%s/DailyPPT", base.path, island, var)
+        tif.path = sprintf("%s/tif/%s", daily.path, year)
+        day = 366
+        old_name = sprintf("%s/DailyPPT_RAINNC_%s_%s_%s_test2.tif", tif.path, timestep, year, day)
+        correct_name = sprintf("%s/DailyPPT_RAINNC_%s_%s_%s.tif", tif.path, timestep, year, day)
+        file.rename(old_name, correct_name)
+      }
+    }
+  }
+}
+
+
+#**# RE-RUN THIS AFTER THE LEAP-DAY PATCH ABOVE
+# Create integer rasters for each of the islands and scenarios
+patch.int.rasters = 0
+if (patch.int.rasters == 1){
+  require(rspat)
+  base.dir = "F:/hawaii_local/Vars"
+  islands = c('kauai', 'oahu', 'maui', 'hawaii') 
+  timesteps = c('present', 'rcp45', 'rcp85')
+  for (island in islands){
+    message(island)
+    for (year in 1990:2009){ # 1990:2009
+      message(year)
+      for (scenario in timesteps){
+        message(scenario)
+        this.dir = sprintf("%s/%s/RAINNC_%s/DailyPPT/tif/%s", base.dir, island, scenario, year)
+        out.dir = sprintf("%s/%s/RAINNC_%s/DailyPPT/int_tif/%s", base.dir, island, scenario, year)
+        if (!file.exists(out.dir)){
+          dir.create(out.dir, recursive = TRUE)
+        }
+        days = 365
+        if (year %% 4 == 0){
+          days = 366
+        }
+        for (day in 1:days){
+          a.file = sprintf("DailyPPT_RAINNC_%s_%s_%03.f.tif", scenario, year, day)
+          in.file = sprintf("%s/%s", this.dir, a.file)
+          out.file = sprintf("%s/%s", out.dir, a.file) #**# Do we want to label them as integer rasters?
+          out.rast = rast(in.file)
+          out.rast = round(out.rast[[1]]*100, 0)
+          x <- writeRaster(out.rast, out.file, overwrite=TRUE, datatype = "INT4U") # [[1]] makes it a single band raster with the interpolated values
+        }
+      }
+    }
+  }
+}
+

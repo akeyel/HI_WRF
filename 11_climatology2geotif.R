@@ -16,7 +16,8 @@ template.raster.file = sprintf("%s/Vars/grids/templates/%s_template.tif", data.d
 island.grid = sprintf("Vars/grids/wrf_grids/%s_xy_grid_index.csv", island)
 months = seq(1,12)
 base.path = sprintf("Vars/%s/%s_%s/Climatology",island, this.var, timestep)
-tif.path = sprintf("%s/tif", base.path)
+tif.path = sprintf("%s/int_tif", base.path)
+if (!file.exists(tif.path)){dir.create(tif.path)}
 file.base = sprintf("%s_Annual", this.var) 
 in.file = sprintf("%s/%s.rda", base.path, file.base)
 load(in.file)
@@ -45,6 +46,6 @@ for (month in months){
   csv.file = sprintf("%s.csv", file.base)
   csv.in.file = sprintf("%s/%s", base.path, csv.file)
   convert.to.csv(climatology, csv.in.file, island.grid)
-  run.interpolation(base.path, csv.file, template.raster, n.neighbors = 12, power = 2)
+  run.interpolation(base.path, csv.file, template.raster, n.neighbors = 12, power = 2, to.integer = 1)
 }
 

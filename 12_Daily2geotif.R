@@ -11,7 +11,7 @@ for (year in start.year:end.year){
   message(sprintf("Now processing %s", year))
   daily.path = sprintf("%s/%s/%s/DailyPPT", base.path, island, var)
   out.folder = sprintf("%s/CSV_for_Tifs/%s", daily.path, year)
-  tif.path = sprintf("%s/tif/%s", daily.path, year)
+  tif.path = sprintf("%s/int_tif/%s", daily.path, year)
   if (!file.exists(out.folder)){
     dir.create(out.folder, recursive = TRUE)
   }
@@ -27,7 +27,8 @@ for (year in start.year:end.year){
   
   # Loop through days in the year
   days = 365
-  if (year %in% leap.years){  days = 366  }
+  #if (year %in% leap.years){  days = 366  } # This was incorrect - used the index position rather than the actual year.
+  if (year %% 4 == 0){ days = 366 } # This will give a bad result for 1900 and 2100, but those years aren't in the data set.
   for (day in 1:days){
     csv.file = sprintf("DailyPPT_%s_%s_%03.f.csv", var, year, day)
     csv.file.full = sprintf("%s/%s",out.folder, csv.file)
@@ -43,6 +44,6 @@ for (year in start.year:end.year){
     
     #**# Need to change the structuring - I don't like that the tif folder has to be nested in the .csv folder. Would rather they were parallel to each other.
     # Run interpolation
-    run.interpolation(out.folder, tif.path, csv.file, template.raster, n.neighbors = 12, power = 2)
+    run.interpolation(out.folder, tif.path, csv.file, template.raster, n.neighbors = 12, power = 2, to.integer = 1)
   }
 }

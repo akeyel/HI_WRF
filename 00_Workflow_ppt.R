@@ -163,7 +163,7 @@ if (daily.to.raster == 1){
       message(timestep)
       setwd(code.dir)
       this.var = "RAINNC"
-      base.path = "F:/hawaii_local/Vars"
+      base.path = sprintf("%s/Vars", data.dir)
       start.year = 1990
       end.year = 2009
       source("12_Daily2geotif.R")
