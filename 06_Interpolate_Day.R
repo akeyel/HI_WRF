@@ -619,5 +619,134 @@ add.X.hours.ok = function(base.path, island, scenario, GMT.offset){
 }
 
 
+#' This is a simple version for non-cumulative variables
+#' 
+#' (i.e. not for precipitation, where values are cumulative)
+add.X.hours.var = function(base.path, island, variable, scenario, GMT.offset){
+  new.ending = 175320 + GMT.offset
+  
+  # open existing file (or files)
+  load(sprintf("%s/%s_%s/hourly/%s_%s_%s_175320.rda", base.path, variable, scenario, island, variable, scenario))
+  var.data = hourly
+  rm(hourly)
+  
+  dims = dim(var.data)
+  # Add extra space for the interpolated values
+  new.dim = dims[3] + GMT.offset
+  nc.array = array(data = rep(NA), dim = c(dims[1],dims[2],new.dim))
+  nc.array[,,1:dims[3]] = var.data[,,1:dims[3]]
+  
+  # Read value for corresponding timesteps for interpolation
+  # Currently using the previous day's value, to maintain the same synoptic pattern
+  current.step = 320
+  for (i in 1:GMT.offset){
+    current.step = current.step + 1
+    # Assign values to the next spot in the array
+    nc.array[,,current.step] = var.data[,,current.step - 24]
+  }
+  
+  # Delete the existing file #**# FOR NOW, just renaming it - afraid of file corruption
+  original = sprintf("%s/%s_%s/hourly/%s_%s_%s_175320.rda", base.path, variable, scenario, island, variable, scenario)
+  renamed = sprintf("%s/%s_%s/hourly/%s_%s_%s_175320_deleteme.rda", base.path, variable, scenario, island, variable, scenario)
+  file.rename(original, renamed)
+  
+  # Save the file out with the correct number of time steps
+  hourly = nc.array
+  save(hourly, file = sprintf("%s/%s_%s/hourly/%s_%s_%s_%s.rda", base.path, variable, scenario, island, variable, scenario, new.ending))
+  rm(hourly)
+}
+
+# Fix present time series for Hawaii and Maui for present-day precipitation
+# Need a separate function for Oahu/Kauai
+# missing I_RAIN variable actually makes this approach rather problematic, as there is no way to know what the total amount of missing rainfall was.
+# That may look more like a temperature interpolation.
+# Currently hard-coded to fix Jan 1, 1996
+insert.interpolated.day = function(base.path, island, var){
+  setwd(base.path)
+  # Assumes data have been downloaded in chunks of 1000
+  # Note that this will shift all files after Jan 1, 1996
+  
+  main.folder.nc = sprintf("%s_present/hourly", var)
+  new.folder.nc = sprintf("%s_present/hourly_raw", var)
+  #**# Fix this on download!
+  if (!file.exists(new.folder.nc)){
+    stop("Please rename the hourly folder hourly_raw. Please copy files 1000 - 52000 into a new hourly folder. The rest of the files will be filled in by the script.")
+  }
+  
+  #**# Should fix this so this issue does not arise in the first place.
+  if (sprintf("%s_RAINNC_%s_1e+05.rda", island, var) %in% list.files(new.folder.nc)){
+    stop("Please rename 1e05 file to be 100000. R is being annoying about this.")
+  }
+  
+  # Find location of Jan 1, 1996
+  jan1 = 365*24*6 + 24 + 1 # 365 days in a year, 24 hours in a day, for 6 years (1996 is year 7), plus one leap day (1996 leap day hasn't happened yet) + 1 to move to the new day
+  
+  # Read in the file
+  # load present day RAINNC
+  load(sprintf("%s_present/hourly_raw/%s_%s_present_53000.rda", var, island, var)) # loads the hourly object
+  var.data = hourly
+  rm(hourly)
+  dims = dim(var.data)
+  
+  # Get the indices for the interpolation
+  dec31 = (jan1 - 1) - 52000
+  jan2 = (jan1) - 52000
+  # Add an index for jan2 post-interpolation
+  jan2.post = jan2 + 24
+  
+  # Create an array to contain everything
+  nc.array = array(data = rep(NA), dim = c(dims[1],dims[2],dims[3]))
+  
+  # Fill in part BEFORE the patch
+  nc.array[1:dims[1],1:dims[2],1:dec31] = var.data[1:dims[1], 1:dims[2], 1:dec31]
+  
+  # Patch with prior day's values (only works for non-cumulative variables)
+  nc.array[1:dims[1],1:dims[2],jan2:(jan2.post - 1)] = var.data[1:dims[1],1:dims[2],(dec31 + 1):(dec31 + 24)]
+  
+  # Fill in AFTER the patch
+  nc.array[1:dims[1], 1:dims[2], jan2.post:1000] =  var.data[1:dims[1], 1:dims[2], jan2:(1000 - 24)]
+  #plot(nc.array[1,1,])
+  #plot(nc.array[1,1,580:610])
+  
+  # Save updated arrays to file (this is a slow step)
+  hourly = nc.array
+  save(hourly, file = sprintf("%s_present/hourly/%s_%s_present_53000.rda", var, island, var))
+  
+  # Repeat until no files are left.
+  for (i in 54:175){
+    print(i)
+    
+    # Create blank arrays to contain everything
+    this.array = array(data = NA, dim = c(dims[1],dims[2],1000))
+    
+    # Extract last 24 hours
+    # Load previous file
+    load(sprintf("%s_present/hourly_raw/%s_%s_present_%s000.rda", var, island, var, (i- 1)))
+    this.array[1:dims[1], 1:dims[2],1:24] = hourly[1:dims[1],1:dims[2],977:1000]
+    
+    # Load current file
+    # Extract all but last 24 hours
+    load(sprintf("%s_present/hourly_raw/%s_%s_present_%s000.rda", var, island, var, i))
+    this.array[1:dims[1], 1:dims[2],25:1000] = hourly[1:dims[1],1:dims[2],1:976]
+    
+    # Save merged file
+    rm(hourly) # Make sure we're saving the right thing
+    hourly = this.array
+    save(hourly, file = sprintf("%s_present/hourly/%s_%s_present_%s000.rda", var, island, var, i))
+    rm(hourly)
+  }
+  
+  # Special handling for the very last file
+  this.array = array(data = NA, dim = c(dims[1],dims[2],320))
+  load(sprintf("%s_present/hourly_raw/%s_%s_present_175000.rda", var, island, var))
+  this.array[1:dims[1], 1:dims[2],1:24] = hourly[1:dims[1],1:dims[2],977:1000]
+  load(sprintf("%s_present/hourly_raw/%s_%s_present_175296.rda", var, island, var))
+  this.array[1:dims[1], 1:dims[2],25:320] = hourly[1:dims[1],1:dims[2],1:296]
+  # Save merged file
+  rm(hourly) # Make sure we're saving the right thing
+  hourly = this.array
+  save(hourly, file = sprintf("%s_present/hourly/%s_%s_present_175320.rda", var, island, var))
+  rm(hourly)
+}
 
 

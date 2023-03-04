@@ -2,51 +2,26 @@
 
 library(ncdf4)
 
-#for (variable in c('I_RAINNC', 'RAINNC')){
-#message(variable)
-base.path = sprintf("F:/hawaii_local/Vars/%s/%s/hourly", island, variable)
-dir.create(base.path, recursive = TRUE)
-data.file = get.data.file(island, scenario)
-my.ncdf =ncdf4::nc_open(data.file)
-
-start = 1
-end = 1000
-total.timesteps = 175320 # For RCP runs.
-if (variable == 'RAINNC_present'){ total.timesteps = 175296 }
-
-if (island %in% c('oahu','kauai')){
-  Data.Download_ok(base.path, island, variable, total.timesteps, start, end)
-}
-if (island %in% c('maui', 'hawaii')){
-  Data.Download_hm(base.path, island, variable, scenario, total.timesteps, start, end)
-}
-
-nc_close(my.ncdf)
-
-#**# LEFT OFF HERE - WANT TO CONVERT THE HI/MAUI and KAUAI OAHU into a single version for a single function call.
-
-for (island in c("maui", "hawaii")){
-  message(island)
-  for (scenario in c('present', 'rcp45', 'rcp85')){
-    message(scenario)
-    for (variable in c('I_RAINNC', 'RAINNC')){
-      message(variable)
-      base.path = sprintf("F:/hawaii_local/Vars/%s/%s_%s/hourly", island, variable, scenario)
-      dir.create(base.path, recursive = TRUE)
-      data.file = get.data.file(island, scenario)
-      my.ncdf =ncdf4::nc_open(data.file)
-      
-      start = 1
-      end = 1000
-      total.timesteps = 175320 # For RCP runs.
-      if (scenario == 'present'){ total.timesteps = 175296 }
-      
-      Data.Download_hm(base.path, island, variable, scenario, total.timesteps, start, end)
-      
-      nc_close(my.ncdf)
-    }   
+Download_Var = function(base.path, island, scenario, variable){
+  dir.create(base.path, recursive = TRUE)
+  data.file = get.data.file(island, scenario)
+  my.ncdf =ncdf4::nc_open(data.file)
+  
+  start = 1
+  end = 1000
+  total.timesteps = 175320 # For RCP runs.
+  if (scenario == 'present'){ total.timesteps = 175296 }
+  
+  if (island %in% c('oahu','kauai')){
+    Data.Download_ok(my.ncdf, base.path, island, variable, total.timesteps, start, end)
   }
+  if (island %in% c('maui', 'hawaii')){
+    Data.Download_hm(my.ncdf, base.path, island, variable, scenario, total.timesteps, start, end)
+  }
+  
+  nc_close(my.ncdf)
 }
+
 
 # Use for each island to get the number of timesteps in the file
 Get.Timesteps = function(my.ncdf, variable){
@@ -56,3 +31,52 @@ Get.Timesteps = function(my.ncdf, variable){
   return(total.timesteps)
 }
 
+#' Data downloader for Hawaii and Maui
+#' 
+Data.Download_hm = function(my.ncdf, base.path, island, variable, scenario, total.timesteps, start = 1, end = 1000){
+  
+  while(start < total.timesteps){
+    timesteps = end - start + 1 # +1 because it is inclusive of start
+    hourly = ncvar_get(my.ncdf, variable, start = c(1,1,start), count = c(-1,-1,timesteps))
+    #hourly = ncvar_get(my.ncdf, variable, start = c(1,1,start), count = c(1,1,timesteps)) #**# TESTING VERSION - USE CODE ABOVE ONCE WORKING PROPERLY
+    message(start)
+    message(end)
+    message(timesteps) # Should always be 1000, except at the very end
+    save(hourly, file = sprintf("%s/%s_%s_%s_%s.rda", base.path, island, variable, scenario, end))
+    
+    start = start + 1000
+    end = end + 1000
+    if (end > total.timesteps){
+      end = total.timesteps
+    }
+    
+    if (start > 200000){
+      stop("Something appears to have gone wrong with the extraction - 200,000 timesteps reached, when the data set was expected to have <180,000")
+    }
+  }
+}
+
+#' Data downloader for Oahu and Kauai
+#' 
+Data.Download_ok = function(my.ncdf, base.path, island, variable, total.timesteps, start = 1, end = 1000){
+  
+  while(start < total.timesteps){
+    timesteps = end - start + 1 # +1 because it is inclusive of start
+    hourly = ncvar_get(my.ncdf, variable, start = c(1,1,start), count = c(-1,-1,timesteps))
+    #hourly = ncvar_get(my.ncdf, variable, start = c(1,1,start), count = c(1,1,timesteps)) #**# TESTING VERSION - USE CODE ABOVE ONCE WORKING PROPERLY
+    message(start)
+    message(end)
+    message(timesteps) # Should always be 1000, except at the very end
+    save(hourly, file = sprintf("%s/%s_%s_%s.rda", base.path, island, variable, end))
+    
+    start = start + 1000
+    end = end + 1000
+    if (end > total.timesteps){
+      end = total.timesteps
+    }
+    
+    if (start > 200000){
+      stop("Something appears to have gone wrong with the extraction - 200,000 timesteps reached, when the data set was expected to have <180,000")
+    }
+  }
+}

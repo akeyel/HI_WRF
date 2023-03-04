@@ -743,55 +743,6 @@ convert.to.csv = function(current.values, out.file, island.grid, int100 = FALSE)
   
 }
 
-#' Data downloader for Hawaii and Maui
-#' 
-Data.Download_hm = function(base.path, island, variable, scenario, total.timesteps, start = 1, end = 1000){
-  
-  while(start < total.timesteps){
-    timesteps = end - start + 1 # +1 because it is inclusive of start
-    hourly = ncvar_get(my.ncdf, variable, start = c(1,1,start), count = c(-1,-1,timesteps))
-    #hourly = ncvar_get(my.ncdf, variable, start = c(1,1,start), count = c(1,1,timesteps)) #**# TESTING VERSION - USE CODE ABOVE ONCE WORKING PROPERLY
-    message(start)
-    message(end)
-    message(timesteps) # Should always be 1000, except at the very end
-    save(hourly, file = sprintf("%s/%s_%s_%s_%s.rda", base.path, island, variable, scenario, end))
-    
-    start = start + 1000
-    end = end + 1000
-    if (end > total.timesteps){
-      end = total.timesteps
-    }
-    
-    if (start > 200000){
-      stop("Something appears to have gone wrong with the extraction - 200,000 timesteps reached, when the data set was expected to have <180,000")
-    }
-  }
-}
-
-#' Data downloader for Oahu and Kauai
-#' 
-Data.Download_ok = function(base.path, island, variable, total.timesteps, start = 1, end = 1000){
-  
-  while(start < total.timesteps){
-    timesteps = end - start + 1 # +1 because it is inclusive of start
-    hourly = ncvar_get(my.ncdf, variable, start = c(1,1,start), count = c(-1,-1,timesteps))
-    #hourly = ncvar_get(my.ncdf, variable, start = c(1,1,start), count = c(1,1,timesteps)) #**# TESTING VERSION - USE CODE ABOVE ONCE WORKING PROPERLY
-    message(start)
-    message(end)
-    message(timesteps) # Should always be 1000, except at the very end
-    save(hourly, file = sprintf("%s/%s_%s_%s.rda", base.path, island, variable, end))
-    
-    start = start + 1000
-    end = end + 1000
-    if (end > total.timesteps){
-      end = total.timesteps
-    }
-    
-    if (start > 200000){
-      stop("Something appears to have gone wrong with the extraction - 200,000 timesteps reached, when the data set was expected to have <180,000")
-    }
-  }
-}
 
 #' Replace bad day in the daily data for Maui with prior day
 #' 

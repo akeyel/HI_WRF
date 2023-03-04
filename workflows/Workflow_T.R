@@ -41,6 +41,10 @@ source("Settings/Settings_T.R")
 # Step 3: Load interpolation function
 source("03_SpatialInterpolateFunction.R")
 
+# Load the data download function
+source("05_Data_Downloader_generic.R") # This version loads the Download_Var function. The ppt version is a script.
+
+
 ##### Process data from web-available sources ######
 #### Process the Data #### 
 
@@ -67,13 +71,21 @@ if (make.grid == 1){
 # STEP 5: Download data from USGS
 # Currently set up to run for all 4 islands - may want to adjust options to select islands.
 if (download.data == 1){
-  for (island in c("oahu", "kauai")){
+  for (island in islands){
     message(island)
     for (scenario in c('present', 'rcp45', 'rcp85')){
-      variable = sprintf("T2_%s", scenario)
-      message(variable)
-      #**# LEFT OFF HERE
-      source("05_Data_Downloader_generic.R") #**# scenario and variable are implicit passes. Should convert this to a function to make the passes explicit.
+      if (island %in% ok.vec){
+        variable = sprintf("T2_%s", scenario)
+        base.path = sprintf("%s/Vars/%s/%s/hourly", data.dir, island, variable)
+        message(variable)
+      }
+      if (island %in% hm.vec){
+        variable = "T2"
+        base.path = sprintf("%s/Vars/%s/%s_%s/hourly", data.dir, island, variable, scenario)
+        message(sprintf("%s_%s", variable, scenario))
+      }
+      
+      Download_Var(base.path, island, scenario, variable)
     }
   }
 }
@@ -82,19 +94,12 @@ if (download.data == 1){
 if (interpolate.day == 1){
   setwd(code.dir)
   source("06_Interpolate_Day.R") # Loads the functions from this script
-  for (island in hm.vec){
+  variable = "T2"
+  for (island in islands){
     base.path = sprintf("F:/hawaii_local/Vars/%s", island)
-    fix.hm.ppt.timeseries(base.path, island)
+    insert.interpolated.day(base.path, island, variable)
     for (scenario in timesteps){
-      add.X.hours.hm(base.path, island, scenario, GMT.offset)
-    }
-  }
-  
-  for (island in ok.vec){
-    base.path = sprintf("F:/hawaii_local/Vars/%s", island)
-    fix.ok.ppt.timeseries(base.path, island)
-    for (scenario in timesteps){
-      add.X.hours.ok(base.path, island, scenario, GMT.offset)
+      add.X.hours.var(base.path, island, variable, scenario, GMT.offset) #**# Needs testing
     }
   }
 }
@@ -102,11 +107,12 @@ if (interpolate.day == 1){
 
 # STEP 7: Extract variables for further processing locally on R
 if (extract.variables == 1){
-  for (island in ok.vec){
+  setwd(code.dir)
+  source("07_ExtractAnnual_general.R") # now loads the extract.annual.data function, instead of being a script that is run when sourced as for precipitation
+  for (island in islands){
     for (scenario in timesteps){
-      setwd(code.dir)
       message(sprintf("%s: %s", island, scenario))
-      source("07_ExtractAnnual_ok_ppt.R")
+      extract.annual.data(STUFF) #**# IN PROGRESS
     }
   }
   

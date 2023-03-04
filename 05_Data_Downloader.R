@@ -3,6 +3,8 @@
 library(ncdf4)
 
 source("C:/Users/ak697777/University at Albany - SUNY/Elison Timm, Oliver - CCEID/HI_WRF/Workflow_hlpr.R")
+source("C:/Users/ak697777/University at Albany - SUNY/Elison Timm, Oliver - CCEID/HI_WRF/05_Data_Downloader_generic.R")
+# Data.Download_ok and Data.Download_hm moved to the generic downloader version of the script and this was edited to reflect those changes.
 
 #**# Need to revert loop for hawaii/maui - should have left it and copied this, but I didn't. So will need to fix that.
 for (island in c("oahu", "kauai")){
@@ -21,7 +23,7 @@ for (island in c("oahu", "kauai")){
     total.timesteps = 175320 # For RCP runs.
     if (variable == 'RAINNC_present'){ total.timesteps = 175296 }
 
-    Data.Download_ok(base.path, island, variable, total.timesteps, start, end)
+    Data.Download_ok(my.ncdf, base.path, island, variable, total.timesteps, start, end)
     
     nc_close(my.ncdf)
 #    }   
@@ -44,7 +46,7 @@ for (island in c("maui", "hawaii")){
       total.timesteps = 175320 # For RCP runs.
       if (scenario == 'present'){ total.timesteps = 175296 }
       
-      Data.Download_hm(base.path, island, variable, scenario, total.timesteps, start, end)
+      Data.Download_hm(my.ncdf, base.path, island, variable, scenario, total.timesteps, start, end)
       
       nc_close(my.ncdf)
     }   
