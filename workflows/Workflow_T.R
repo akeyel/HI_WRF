@@ -112,26 +112,18 @@ if (extract.variables == 1){
   for (island in islands){
     for (scenario in timesteps){
       message(sprintf("%s: %s", island, scenario))
-      extract.annual.data(STUFF) #**# IN PROGRESS
-    }
-  }
-  
-  # Scenarios are in separate WRF files for Hawaii and Maui, need to extract data for those as well
-  for (island in hm.vec){
-    for (scenario in timesteps){
-      setwd(code.dir)
-      source("07_ExtractAnnual_hm_ppt.R")
+      base.path = "F:/hawaii_local/Vars"
+      new.dir = "Daily"
+      variable = "T2"
+      extract.annual.data(base.path, island, variable, scenario, new.dir,
+                          GMT.offset, leap.years)
     }
   }
 }
 
 # STEP 8: Fix known errors in the daily data set
 if (do.corrections == 1){
-  base.path = "F:/hawaii_local/Vars/maui/RAINNC_rcp45/DailyPPT"
-  fix.ppt.2007.365(base.path)
-  # Same problem with negative values occurred in the Hawaii data set
-  base.path = "F:/hawaii_local/Vars/hawaii/RAINNC_rcp45/DailyPPT"
-  fix.ppt.2007.365(base.path)
+  #**# Watch for problems in Maui and HI for day 365 in year 2007
 }
 
 # STEP 9: Do basic quality control to check for unrealistic values
@@ -139,13 +131,19 @@ if (do.corrections == 1){
 
 # STEP 10: Create daily, annual and monthly aggregates and climatologies
 if (create.aggregates == 1){
+  setwd(code.dir)
+  source("10_ProcessAnnual_generic.R")
+  metrics = c('minimum', 'maximum', 'mean', 'median','midpoint')
+  
   for (island in islands){
     # Loop through scenarios
     for (timestep in timesteps){
-      message(sprintf("Running for %s %s", island, timestep))
-      setwd(code.dir)
-      base.path = sprintf("%s/Vars/%s/RAINNC_%s/DailyPPT", data.dir, island, timestep)
-      source("10_ProcessAnnual_ppt.R")
+      for (metric in metrics){
+        message(sprintf("Running for %s %s %s", island, timestep, metric))
+        base.path = sprintf("%s/Vars/%s/%s_%s/Daily", data.dir, island, variable, timestep)
+        ProcessAnnual(base.path, metric, variable, timestep,
+                                 first.year, last.year, leap.years)
+      }
     }
   }
 }

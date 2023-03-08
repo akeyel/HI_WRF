@@ -17,6 +17,12 @@ get.data.file = function(island, scenario){
   return(data.file)  
 }
 
+load.file = function(variable, scenario, file.end){
+  in.file = sprintf("%s_%s/hourly/%s_%s_%s_%s.rda", variable, scenario, island, variable, scenario, format(file.end, scientific = F))
+  load(in.file) 
+  return(hourly)
+}
+
 #' Create directories to store data
 #' 
 create.my.directories = function(main.path, ppt.offset){
