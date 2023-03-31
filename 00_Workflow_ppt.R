@@ -14,12 +14,8 @@
 #     - L. Fortini
 #     - Xiao Luo
 
-#**# TO DO
-# Need to update ppt_hm file
-# Need to update and check temperature files
-# Need to auto-generate climatology folder when making directories
 
-#**# Change as needed
+#NOTE: Change as needed
 # Code Directory
 code.dir = 'C:/Users/ak697777/University at Albany - SUNY/Elison Timm, Oliver - CCEID/HI_WRF'
 
@@ -126,7 +122,7 @@ if (do.corrections == 1){
 }
 
 # STEP 9: Do basic quality control to check for unrealistic values
-#**# NEEDS SCRIPTING/THINKING
+# All QC done at end
 
 # STEP 10: Create daily, annual and monthly aggregates and climatologies
 if (create.aggregates == 1){
@@ -171,5 +167,52 @@ if (daily.to.raster == 1){
   }
 }
 
+# STEP 13: Convert monthly and annual data to GeoTif
+means.to.raster = 0
+setwd(code.dir)
+source("13_Means2geotif.R")
+if (means.to.raster == 1){
+  for (island in islands){
+    message(island)
+    for (timestep in timesteps){
+      message(timestep)
+      variable = "RAINNC"
+      base.path = sprintf("%s/Vars", data.dir)
+      start.year = 1990
+      end.year = 2009
+      extra.bit = "_ppt"
+      
+      # Convert Annual means to geotif
+      message('processing annual data')
+      mean2geotif(base.path, island, variable, timestep, start.year, end.year, 'annual', extra.bit)
+      
+      # Convert monthly means to geotif
+      message("Processing monthly data")
+      mean2geotif(base.path, island, variable, timestep, start.year, end.year, 'monthly', extra.bit)
+    }
+  }
+}
+
 # STEP 13: Final Quality Control: Compare present-day WRF to Hawaii Rainfall Atlas
-#**# NOT SCRIPTED
+island.bits = c('oa', 'ka', 'bi', 'ma')
+source("XX_Quality_Control_Write_up_Figs.R")
+for (i in 1:length(islands)){
+  island = islands[i]
+  island.bit = island.bits[i]
+  
+  data.folder = sprintf("F:/hawaii_local/Vars/%s/RAINNC_present", island)
+  ref.folder = sprintf("F:/hawaii_local/Rainfall_Atlas/%sRFGrids_mm/", island)
+  fig.folder = sprintf("F:/hawaii_local/QC/%s/RAINNC_present", island)
+  if(!file.exists(fig.folder)){
+    dir.create(fig.folder, recursive = TRUE)
+  }
+  
+  use.ref = 1
+  variable = "RAINNC" # For both rain variables at this stage
+  outline = sprintf("F:/hawaii_local/Vector/%s_ne.shp", island)
+  ref.type = 'ppt'
+  
+  create.qc.plots(data.folder, ref.folder, fig.folder, variable, use.ref, ref.type,
+                  island, island.bit, outline, do.main = 1, do.supplement = 0)
+  
+}

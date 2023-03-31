@@ -1,6 +1,8 @@
 # List Variable Names for the different Islands
 # Created 2022-4-12 from Workflow_v2.R
 
+library(ncdf4)
+
 # Open the data file
 my.ncdf =ncdf4::nc_open(data.file)
 #print(my.ncdf) # This shows the associated metadata
@@ -125,4 +127,6 @@ sink()
 # [191] "SR"                    "SAVE_TOPO_FROM_REAL"   "ISEEDARR_RAND_PERTURB" "ISEEDARR_SPPT"         "ISEEDARR_SKEBS"       
 # [196] "LANDMASK"              "LAKEMASK"              "SST"                   "SST_INPUT"
 
+wind = ncvar_get(test, 'U')
 
+grid = read.csv("F:/hawaii_local/Vars/grids/wrf_grids/3d_grid_2.csv")

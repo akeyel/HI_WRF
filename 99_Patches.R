@@ -1,5 +1,59 @@
 # Assorted patches to bring data structure in line with code changes that occurred after processing
 
+#' Create HI Rainfall Atlas climatologies that are comparable to the WRF climatologies
+#' 
+#' 2023-03-26
+#' 
+#' Individual Month-year rasters were downloaded from http://rainfall.geography.hawaii.edu/downloads.html
+#' Sub-heading Month-Year Maps 1920-2012
+#' ESRI Grid Format
+#' Hawaii, Kauai, Oahu and Maui, in mm
+#' 
+Custom.Climatologies = function(RF.path, out.path, island, island.bit){
+  require(terra)
+  require(rspat)
+  # Make Annual climatology
+  ann.clim = rast(sprintf("%s/Annual/%sann_1990_mm", RF.path, island.bit))
+  for (year in 1991:2009){
+    this.rast = rast(sprintf("%s/Annual/%sann_%s_mm", RF.path, island.bit, year))
+    ann.clim = ann.clim + this.rast
+  }
+  ann.clim = ann.clim / 20
+  out.file = sprintf("%s/annual_1990_2009.tif", out.path)
+  x <- writeRaster(ann.clim, out.file, overwrite=TRUE, datatype = "INT4U")
+  
+  # Make Monthly climatologies
+  month.bits = c("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+  for (i in 1:12){
+    month.bit = month.bits[i]
+    month.clim = rast(sprintf("%s/%s_%0.2d%s/%s%s1990_mm", RF.path, island.bit, i, month.bit, island.bit, month.bit))
+    for (year in 1991:2009){
+      this.rast = rast(sprintf("%s/%s_%0.2d%s/%s%s%s_mm", RF.path, island.bit, i, month.bit, island.bit, month.bit, year))
+      month.clim = month.clim + this.rast
+    }
+    month.clim = month.clim / 20
+    out.file = sprintf("%s/Month_%0.2d_1990_2009.tif", out.path, i)
+    x <- writeRaster(month.clim, out.file, overwrite=TRUE, datatype = "INT4U")
+  }
+}
+
+make.climatologies = 0
+if (make.climatologies == 1){
+  #islands = c('hawaii', 'oahu', 'maui', 'kauai')
+  islands = c('oahu', 'maui', 'kauai')
+  #island.bits = c('bi', 'oa', 'ma', 'ka')
+  island.bits = c('oa', 'ma', 'ka') # Hawaii already run as a test
+  for (i in 1:length(islands)){
+    island = islands[i]
+    island.bit = island.bits[i]
+    out.path = sprintf("F:/hawaii_local/Rainfall_Atlas/%sRFGrids_mm/Climatology", island)
+    if (!file.exists(out.path)){ dir.create(out.path)}
+    RF.path = sprintf('F:/hawaii_local/Rainfall_Atlas/%sRFGrids_mm/Month_Rasters_%s_mm', island, island) # Note: folders were manually renamed during the unzipping process.
+    Custom.Climatologies(RF.path, out.path, island, island.bit)
+  }
+}
+
+
 patch.kauai.folders = 0
 if (patch.kauai.folders == 1){
   base.path = "F:/hawaii_local/Vars/kauai/RAINNC_present/DailyPPT"

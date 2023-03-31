@@ -37,6 +37,7 @@ source("01_Workflow_hlpr.R")
 
 # STEP 2: Load settings to run the precipitation analysis
 source("Settings/Settings_T.R")
+variable = "T2" #**# Move into settings? Could also define var here as the variable plus the timestep.
 
 # Step 3: Load interpolation function
 source("03_SpatialInterpolateFunction.R")
@@ -75,12 +76,11 @@ if (download.data == 1){
     message(island)
     for (scenario in c('present', 'rcp45', 'rcp85')){
       if (island %in% ok.vec){
-        variable = sprintf("T2_%s", scenario)
-        base.path = sprintf("%s/Vars/%s/%s/hourly", data.dir, island, variable)
-        message(variable)
+        var = sprintf("T2_%s", scenario)
+        base.path = sprintf("%s/Vars/%s/%s/hourly", data.dir, island, var)
+        message(var)
       }
       if (island %in% hm.vec){
-        variable = "T2"
         base.path = sprintf("%s/Vars/%s/%s_%s/hourly", data.dir, island, variable, scenario)
         message(sprintf("%s_%s", variable, scenario))
       }
@@ -94,7 +94,6 @@ if (download.data == 1){
 if (interpolate.day == 1){
   setwd(code.dir)
   source("06_Interpolate_Day.R") # Loads the functions from this script
-  variable = "T2"
   for (island in islands){
     base.path = sprintf("F:/hawaii_local/Vars/%s", island)
     insert.interpolated.day(base.path, island, variable)
@@ -114,7 +113,6 @@ if (extract.variables == 1){
       message(sprintf("%s: %s", island, scenario))
       base.path = "F:/hawaii_local/Vars"
       new.dir = "Daily"
-      variable = "T2"
       extract.annual.data(base.path, island, variable, scenario, new.dir,
                           GMT.offset, leap.years)
     }
@@ -125,9 +123,6 @@ if (extract.variables == 1){
 if (do.corrections == 1){
   #**# Watch for problems in Maui and HI for day 365 in year 2007
 }
-
-# STEP 9: Do basic quality control to check for unrealistic values
-#**# NEEDS SCRIPTING/THINKING
 
 # STEP 10: Create daily, annual and monthly aggregates and climatologies
 if (create.aggregates == 1){
@@ -178,5 +173,31 @@ if (daily.to.raster == 1){
   }
 }
 
-# STEP 13: Final Quality Control: Compare present-day WRF to Hawaii Rainfall Atlas
-#**# NOT SCRIPTED
+# STEP 13: Convert monthly and annual data to GeoTif
+means.to.raster = 0
+setwd(code.dir)
+source("13_Means2geotif.R")
+if (means.to.raster == 1){
+  for (island in islands){
+    message(island)
+    for (timestep in timesteps){
+      message(timestep)
+      base.path = sprintf("%s/Vars", data.dir)
+      start.year = 1990
+      end.year = 2009
+      extra.bit = "" #**# 
+      
+      # Convert Annual means to geotif
+      message('processing annual data')
+      mean2geotif(base.path, island, variable, timestep, start.year, end.year, 'annual', extra.bit)
+      
+      # Convert monthly means to geotif
+      message("Processing monthly data")
+      mean2geotif(base.path, island, variable, timestep, start.year, end.year, 'monthly', extra.bit)
+    }
+  }
+}
+
+
+# STEP 14: Final Quality Control: Compare present-day WRF to Hawaii Rainfall Atlas
+#**# NOT SCRIPTED (begun as part of XX_Quality_Control_Write_up_Figs.R)

@@ -556,6 +556,7 @@ add.X.hours.hm = function(base.path, island, scenario, GMT.offset){
     # Assign values to the next spot in the array
     # Just adjusting rainnc for convenience. The data files already have it exceed 100, so there is no data type benefit here, and it will make this part easier.
     nc.array[,,dims[3] + i] = cumulative.precip
+    baseline = prior.step
   }
   
   # Delete the existing file #**# FOR NOW, just renaming it - afraid of file corruption
@@ -604,6 +605,7 @@ add.X.hours.ok = function(base.path, island, scenario, GMT.offset){
     # Assign values to the next spot in the array
     # Just adjusting rainnc for convenience. The data files already have it exceed 100, so there is no data type benefit here, and it will make this part easier.
     nc.array[,,dims[3] + i] = cumulative.precip
+    baseline = prior.step
   }
   
   # Delete the existing file #**# FOR NOW, just renaming it - afraid of file corruption
