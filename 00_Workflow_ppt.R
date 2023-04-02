@@ -14,6 +14,7 @@
 #     - L. Fortini
 #     - Xiao Luo
 
+new.laptop = 1
 
 #NOTE: Change as needed
 # Code Directory
@@ -21,6 +22,11 @@ code.dir = 'C:/Users/ak697777/University at Albany - SUNY/Elison Timm, Oliver - 
 
 # Data Directory
 data.dir = "F:/hawaii_local"
+
+if (new.laptop == 1){
+  code.dir = "C:/docs/science/HI_WRF"
+  data.dir = "D:/hawaii_local"
+}
 
 # Choose island (oahu, kauai, hawaii, maui) #**# Need to decide if running for all islands, or for each island separately - code is a mixture.
 #island = 'kauai'
@@ -200,19 +206,21 @@ for (i in 1:length(islands)){
   island = islands[i]
   island.bit = island.bits[i]
   
-  data.folder = sprintf("F:/hawaii_local/Vars/%s/RAINNC_present", island)
-  ref.folder = sprintf("F:/hawaii_local/Rainfall_Atlas/%sRFGrids_mm/", island)
-  fig.folder = sprintf("F:/hawaii_local/QC/%s/RAINNC_present", island)
-  if(!file.exists(fig.folder)){
-    dir.create(fig.folder, recursive = TRUE)
-  }
-  
-  use.ref = 1
   variable = "RAINNC" # For both rain variables at this stage
-  outline = sprintf("F:/hawaii_local/Vector/%s_ne.shp", island)
-  ref.type = 'ppt'
-  
-  create.qc.plots(data.folder, ref.folder, fig.folder, variable, use.ref, ref.type,
-                  island, island.bit, outline, do.main = 1, do.supplement = 0)
-  
+  for (scenario in timesteps){
+    data.folder = sprintf("%s/Vars/%s/%s_%s", data.dir, island, variable, scenario)
+    ref.folder = sprintf("%s/Rainfall_Atlas/%sRFGrids_mm/", data.dir, island)
+    fig.folder = sprintf("%s/QC/%s/%s_%s", data.dir, island,  variable, scenario)
+    if(!file.exists(fig.folder)){
+      dir.create(fig.folder, recursive = TRUE)
+    }
+    
+    use.ref = 1
+    if (scenario %in% c('rcp45', 'rcp85')){ use.ref = NA }
+    outline = sprintf("%s/Vector/%s_ne.shp", data.dir, island)
+    ref.type = 'ppt'
+    
+    create.qc.plots(data.folder, ref.folder, fig.folder, variable, use.ref, ref.type,
+                    island, island.bit, scenario, outline, do.main = 1, do.supplement = 1)
+  }  
 }
