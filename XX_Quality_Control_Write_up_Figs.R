@@ -5,7 +5,7 @@ library(rspat)
 create.qc.plots = function(data.folder, ref.folder, fig.folder, variable,
                            use.ref, ref.type,
                            island, island.bit, scenario, outline,
-                           do.main, do.supplement
+                           do.main, do.supplement, do.extra
                            ){
   
   # data.folder = "F:/hawaii_local/Vars/hawaii/RAINNC_present"
@@ -38,6 +38,13 @@ create.qc.plots = function(data.folder, ref.folder, fig.folder, variable,
               island, island.bit, header = TRUE, scenario = scenario)
   }
   
+  if (do.extra == 1){
+    # Plot as a percent of mean
+    QC.percent.mean(data.folder, ref.folder, fig.folder, variable, island, outline, ref.type)
+    
+    # Plot as a percent of inter-annual variation
+    QC.percent.variation(STUFF)
+  }
   #**# NEED TO SCRIPT BELOW HERE
   # Fig. S3
   
@@ -206,3 +213,48 @@ QC.Fig.S2 = function(data.folder, ref.folder, fig.folder, variable, outline,
   dev.off()
 }
 
+QC.percent.mean = function(data.folder, ref.folder, fig.folder, variable, island, outline, ref.type){
+  
+  data.file = sprintf("%s/Climatology/tif/%s_Annual.tif", data.folder, variable)
+  out.raster = sprintf("%s/Climatology/tif/%s_WRFminusRFAoverRFA.tif", data.folder, variable)
+  
+  if (ref.type == 'ppt'){
+    ref.file = sprintf("%s/Climatology/annual_1990_2009.tif", ref.folder)
+  }
+  if (is.na(ref.type)){ stop("Ref type must be defined and supported")} 
+  plot.width = 1400
+  
+  #out.file = sprintf("%s/%s_annual_climatology_plot.pdf", fig.folder, variable)
+  out.file = sprintf("%s/%s_%s_%s_annual_climatology_percent_mean_plot.tif", fig.folder, island, variable, scenario) 
+  tiff(filename = out.file, height = 1200, width = plot.width, res = c(300), compression = c('lzw'))
+  #pdf(out.file)
+  #par(mfrow = c(1,2))
+  #**# MODIFY TO PLOT THE DIFFERENCE SCALED BY VARIATION NEXT TO IT
+  plot.percent.mean(data.file, ref.file, out.raster, outline)
+  dev.off()
+  message(sprintf("Fig %s created", out.file))
+}
+
+plot.percent.mean = function(data.file, ref.file, out.raster, outline,
+                           header2 = ""){
+  # Get WRF - RFA / RFA
+  r = rast(data.file) # How do we set break limits for the figure? probably not that hard, but for now, going with the defaults.
+  o = vect(outline)
+    
+  # Plot Standardized difference figure
+  ref = rast(ref.file)
+  ref2 = crop(ref, r)
+  r2 = crop(r, ref2) # Ensure extents match in both directions
+  std.diff = (r2 - ref2) / ref2
+  writeRaster(std.diff, filename = out.raster, overwrite=TRUE) # , datatype = "INT4U" Need to decide if we want this as an integer raster x100
+  plot(std.diff)
+  polys(o)
+  mtext("(WRF - RFA)/RFA")
+  mtext(sprintf("%s%s",header2, paste(rep(" ", 70), collapse = "")), line = -3.5)
+}
+
+QC.percent.variation = function(STUFF){
+  
+  
+  
+}

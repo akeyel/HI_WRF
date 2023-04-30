@@ -221,6 +221,7 @@ for (i in 1:length(islands)){
     ref.type = 'ppt'
     
     create.qc.plots(data.folder, ref.folder, fig.folder, variable, use.ref, ref.type,
-                    island, island.bit, scenario, outline, do.main = 1, do.supplement = 1)
+                    island, island.bit, scenario, outline, do.main = 1, do.supplement = 1,
+                    do.extra = 1)
   }  
 }

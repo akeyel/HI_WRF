@@ -42,7 +42,7 @@ Data.Download_hm = function(my.ncdf, base.path, island, variable, scenario, tota
     message(start)
     message(end)
     message(timesteps) # Should always be 1000, except at the very end
-    save(hourly, file = sprintf("%s/%s_%s_%s_%s.rda", base.path, island, variable, scenario, end))
+    save(hourly, file = sprintf("%s/%s_%s_%s_%s.rda", base.path, island, variable, scenario, format(end, scientific = F)))
     
     start = start + 1000
     end = end + 1000
@@ -67,7 +67,7 @@ Data.Download_ok = function(my.ncdf, base.path, island, variable, total.timestep
     message(start)
     message(end)
     message(timesteps) # Should always be 1000, except at the very end
-    save(hourly, file = sprintf("%s/%s_%s_%s.rda", base.path, island, variable, end))
+    save(hourly, file = sprintf("%s/%s_%s_%s.rda", base.path, island, variable, format(end, scientific = FALSE)))
     
     start = start + 1000
     end = end + 1000

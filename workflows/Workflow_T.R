@@ -17,9 +17,14 @@
 #**# Change as needed
 # Code Directory
 code.dir = 'C:/Users/ak697777/University at Albany - SUNY/Elison Timm, Oliver - CCEID/HI_WRF'
-
 # Data Directory
 data.dir = "F:/hawaii_local"
+
+new.laptop = 1
+if (new.laptop == 1){
+  code.dir = "C:/docs/science/HI_WRF"
+  data.dir = "D:/hawaii_local"
+}
 
 # Choose island (oahu, kauai, hawaii, maui) #**# Need to decide if running for all islands, or for each island separately - code is a mixture.
 #island = 'kauai'
@@ -76,7 +81,7 @@ if (download.data == 1){
     message(island)
     for (scenario in c('present', 'rcp45', 'rcp85')){
       if (island %in% ok.vec){
-        var = sprintf("T2_%s", scenario)
+        var = sprintf("%s_%s",variable, scenario)
         base.path = sprintf("%s/Vars/%s/%s/hourly", data.dir, island, var)
         message(var)
       }
@@ -95,7 +100,7 @@ if (interpolate.day == 1){
   setwd(code.dir)
   source("06_Interpolate_Day.R") # Loads the functions from this script
   for (island in islands){
-    base.path = sprintf("F:/hawaii_local/Vars/%s", island)
+    base.path = sprintf("%s/Vars/%s", data.dir, island)
     insert.interpolated.day(base.path, island, variable)
     for (scenario in timesteps){
       add.X.hours.var(base.path, island, variable, scenario, GMT.offset) #**# Needs testing
@@ -104,6 +109,11 @@ if (interpolate.day == 1){
 }
 
 
+extract.variables = 1
+do.corrections = 0
+create.aggregates = 0
+climatology.to.raster = 0
+
 # STEP 7: Extract variables for further processing locally on R
 if (extract.variables == 1){
   setwd(code.dir)
@@ -111,12 +121,13 @@ if (extract.variables == 1){
   for (island in islands){
     for (scenario in timesteps){
       message(sprintf("%s: %s", island, scenario))
-      base.path = "F:/hawaii_local/Vars"
       new.dir = "Daily"
+      base.path = sprintf("%s/Vars", data.dir)
       extract.annual.data(base.path, island, variable, scenario, new.dir,
                           GMT.offset, leap.years)
     }
   }
+  create.aggregates = 1
 }
 
 # STEP 8: Fix known errors in the daily data set
@@ -125,10 +136,10 @@ if (do.corrections == 1){
 }
 
 # STEP 10: Create daily, annual and monthly aggregates and climatologies
+metrics = c('minimum', 'maximum', 'mean', 'median','midpoint') #**# Move to settings?
 if (create.aggregates == 1){
   setwd(code.dir)
   source("10_ProcessAnnual_generic.R")
-  metrics = c('minimum', 'maximum', 'mean', 'median','midpoint')
   
   for (island in islands){
     # Loop through scenarios
@@ -141,6 +152,7 @@ if (create.aggregates == 1){
       }
     }
   }
+  climatology.to.raster = 1
 }
 
 # STEP 11: Convert annual and monthly climatologies to CSV and Raster (tif)
@@ -149,26 +161,33 @@ if (climatology.to.raster == 1){
     message(island)
     # Loop through scenarios
     for (timestep in timesteps){
-      message(timestep)
-      setwd(code.dir)
-      this.var = "RAINNC"
-      source("11_climatology2geotif.R") # Also converts to .tif using the run.interpolation function
+      for (metric in metrics){
+        metric.bit = sprintf("%s_", metric)
+        message(timestep)
+        setwd(code.dir)
+        source("11_climatology2geotif.R") # Also converts to .tif using the run.interpolation function
+      }
     }
   }
 }
 
+#**# LEFT OFF HERE FOR KAUAI and MAUI, ON DOWNLOAD STEP FOR Hawaii. Need to transfer data to harddrive for Oahu
 # STEP 12: Convert each day to csv, and then to raster
 if (daily.to.raster == 1){
   for (island in islands){
     message(island)
     for(timestep in timesteps){
-      message(timestep)
-      setwd(code.dir)
-      this.var = "RAINNC"
-      base.path = sprintf("%s/Vars", data.dir)
-      start.year = 1990
-      end.year = 2009
-      source("12_Daily2geotif.R")
+      for (metric in metrics){
+        metric.bit = sprintf("%ss_", metric)
+        message(timestep)
+        message(metric)
+        setwd(code.dir)
+        base.path = sprintf("%s/Vars", data.dir)
+        start.year = 1990
+        end.year = 2009
+        var.label = "" # PPT for precipitation run
+        source("12_Daily2geotif.R")
+      }
     }
   }
 }
@@ -181,19 +200,22 @@ if (means.to.raster == 1){
   for (island in islands){
     message(island)
     for (timestep in timesteps){
-      message(timestep)
-      base.path = sprintf("%s/Vars", data.dir)
-      start.year = 1990
-      end.year = 2009
-      extra.bit = "" #**# 
-      
-      # Convert Annual means to geotif
-      message('processing annual data')
-      mean2geotif(base.path, island, variable, timestep, start.year, end.year, 'annual', extra.bit)
-      
-      # Convert monthly means to geotif
-      message("Processing monthly data")
-      mean2geotif(base.path, island, variable, timestep, start.year, end.year, 'monthly', extra.bit)
+      for (metric in metrics){
+        message(timestep)
+        base.path = sprintf("%s/Vars", data.dir)
+        start.year = 1990
+        end.year = 2009
+        extra.bit = "" #**# 
+        metric.bit = sprintf("%s_", metric)
+        
+        # Convert Annual means to geotif
+        message('processing annual data')
+        mean2geotif(base.path, island, variable, timestep, start.year, end.year, 'annual', extra.bit, metric.bit)
+        
+        # Convert monthly means to geotif
+        message("Processing monthly data")
+        mean2geotif(base.path, island, variable, timestep, start.year, end.year, 'monthly', extra.bit, metric.bit)
+      }
     }
   }
 }
