@@ -13,6 +13,8 @@
 #     - L. Fortini
 #     - Xiao Luo
 
+# Select Variable for analysis
+variable = "T2" 
 
 #**# Change as needed
 # Code Directory
@@ -42,7 +44,6 @@ source("01_Workflow_hlpr.R")
 
 # STEP 2: Load settings to run the precipitation analysis
 source("Settings/Settings_T.R")
-variable = "T2" #**# Move into settings? Could also define var here as the variable plus the timestep.
 
 # Step 3: Load interpolation function
 source("03_SpatialInterpolateFunction.R")
@@ -103,7 +104,7 @@ if (interpolate.day == 1){
     base.path = sprintf("%s/Vars/%s", data.dir, island)
     insert.interpolated.day(base.path, island, variable)
     for (scenario in timesteps){
-      add.X.hours.var(base.path, island, variable, scenario, GMT.offset) #**# Needs testing
+      add.X.hours.var(base.path, island, variable, scenario, GMT.offset) 
     }
   }
 }
@@ -172,25 +173,26 @@ if (climatology.to.raster == 1){
 }
 
 #**# LEFT OFF HERE FOR KAUAI and MAUI, ON DOWNLOAD STEP FOR Hawaii. Need to transfer data to harddrive for Oahu
+## FOR NOW, NOT RUNNING THIS BLOCK - CAN WAIT UNTIL IT IS REQUESTED
 # STEP 12: Convert each day to csv, and then to raster
-if (daily.to.raster == 1){
-  for (island in islands){
-    message(island)
-    for(timestep in timesteps){
-      for (metric in metrics){
-        metric.bit = sprintf("%ss_", metric)
-        message(timestep)
-        message(metric)
-        setwd(code.dir)
-        base.path = sprintf("%s/Vars", data.dir)
-        start.year = 1990
-        end.year = 2009
-        var.label = "" # PPT for precipitation run
-        source("12_Daily2geotif.R")
-      }
-    }
-  }
-}
+#if (daily.to.raster == 1){
+#  for (island in islands){
+#    message(island)
+#    for(timestep in timesteps){
+#      for (metric in metrics){
+#        metric.bit = sprintf("%ss_", metric)
+#        message(timestep)
+#        message(metric)
+#        setwd(code.dir)
+#        base.path = sprintf("%s/Vars", data.dir)
+#        start.year = 1990
+#        end.year = 2009
+#        var.label = "" # PPT for precipitation run
+#        source("12_Daily2geotif.R")
+#      }
+#    }
+#  }
+#}
 
 # STEP 13: Convert monthly and annual data to GeoTif
 means.to.raster = 0
