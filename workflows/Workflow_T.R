@@ -202,6 +202,7 @@ if (means.to.raster == 1){
     for (timestep in timesteps){
       for (metric in metrics){
         message(timestep)
+        message(metric)
         base.path = sprintf("%s/Vars", data.dir)
         start.year = 1990
         end.year = 2009
