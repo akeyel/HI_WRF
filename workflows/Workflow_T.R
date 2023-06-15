@@ -76,16 +76,17 @@ if (download.data == 1){
     message(island)
     for (scenario in c('present', 'rcp45', 'rcp85')){
       if (island %in% ok.vec){
-        var = sprintf("T2_%s", scenario)
+        var = sprintf("%s_%s", variable, scenario)
         base.path = sprintf("%s/Vars/%s/%s/hourly", data.dir, island, var)
         message(var)
+        Download_Var(base.path, island, scenario, var)
       }
       if (island %in% hm.vec){
         base.path = sprintf("%s/Vars/%s/%s_%s/hourly", data.dir, island, variable, scenario)
         message(sprintf("%s_%s", variable, scenario))
+        Download_Var(base.path, island, scenario, variable)
       }
       
-      Download_Var(base.path, island, scenario, variable)
     }
   }
 }

@@ -6,7 +6,8 @@
 # Also this tutorial for saving the file:
 # https://rspatial.org/spatial-terra/5-files.html
 
-if (!require("rspat")) remotes::install_github('rspatial/rspat')
+#if (!require("rspat")) remotes::install_github('rspatial/rspat')
+library(terra)
 library(caret) # Used for RMSE calculation
 library(gstat)
 
