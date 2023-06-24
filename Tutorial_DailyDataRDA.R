@@ -41,7 +41,10 @@ island.grid = "kauai_xy_grid_index.csv"
 template.raster.file = "kauai_template.tif"
 
 csv.path = 'csv/'
-if (!file.exists(csv.path)){dir.create(csv.path)} # yes, it says file.exists, but it works for directories too! And the ! is for NOT
+if (!file.exists(csv.path)){dir.create(csv.path)}
+# yes, it says file.exists, but it works for directories too! And the ! is for NOT
+# So the above reads: If csv.path doesn't exist, create it.
+
 csv.in.file = "csv/Example1.csv" # File plus full path
 csv.file = "Example1.csv" # Just the file name
 convert.to.csv(ppt.array.max, csv.in.file, island.grid)
@@ -53,7 +56,6 @@ if (!file.exists(template.raster.file)){
 
 # Convert FROM .csv to .tif using spatial interpolation
 # template.raster 
-base.path = ""
 tif.path = 'tif/'
 if (!file.exists(tif.path)){dir.create(tif.path)}
 template.raster = terra::rast(template.raster.file)
