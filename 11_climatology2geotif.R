@@ -6,7 +6,10 @@
 #out.file = sprintf("%s/%s_%s_%s_%sday_%s_%s_%s.csv", out.path, Island, Scenario, Variable,
 #                   TemporalRes, Aggregation, FirstDOY, current.year)
 
-# this.var needs to be in the global namespace
+# 2023-04-02 Changed this.var to be variable to be more consistent with the overall code
+# 2023-04-02 Added metric.bit to the file name. For ppt, this will need to be added as "". 
+
+# variable needs to be in the global namespace
 require(terra)
 
 setwd(data.dir)
@@ -15,10 +18,10 @@ setwd(data.dir)
 template.raster.file = sprintf("%s/Vars/grids/templates/%s_template.tif", data.dir, island)
 island.grid = sprintf("Vars/grids/wrf_grids/%s_xy_grid_index.csv", island)
 months = seq(1,12)
-base.path = sprintf("Vars/%s/%s_%s/Climatology",island, this.var, timestep)
+base.path = sprintf("Vars/%s/%s_%s/Climatology",island, variable, timestep)
 tif.path = sprintf("%s/int_tif", base.path)
 if (!file.exists(tif.path)){dir.create(tif.path)}
-file.base = sprintf("%s_Annual", this.var) 
+file.base = sprintf("%s%s_Annual", metric.bit, variable) 
 in.file = sprintf("%s/%s.rda", base.path, file.base)
 load(in.file)
 # loads the climatology object
@@ -39,13 +42,13 @@ run.interpolation(base.path, tif.path, csv.file, template.raster, n.neighbors = 
 
 # Loop through months and process monthly climatologies
 for (month in months){
-  file.base = sprintf("%s_month_%s", this.var, month) 
+  file.base = sprintf("%s%s_month_%s", metric.bit, variable, month) 
   in.file = sprintf("%s/%s.rda", base.path, file.base)
   load(in.file)
   # loads the climatology object
   csv.file = sprintf("%s.csv", file.base)
   csv.in.file = sprintf("%s/%s", base.path, csv.file)
   convert.to.csv(climatology, csv.in.file, island.grid)
-  run.interpolation(base.path, csv.file, template.raster, n.neighbors = 12, power = 2, to.integer = 1)
+  run.interpolation(base.path, tif.path, csv.file, template.raster, n.neighbors = 12, power = 2, to.integer = 1)
 }
 

@@ -514,7 +514,8 @@ calculate.min.max.mean.monthly = function(daily.stuff, i, var, is.leap){
 #' @param var The variable being examined
 #' @param is.leap an indicator for whether or not the year is a leap year
 #' 
-calculate.mean.monthly.ppt = function(daily.stuff, i, var,timestep, is.leap, island, data.dir = "F:/hawaii_local"){
+calculate.mean.monthly.var = function(daily.stuff, i, var,timestep, is.leap, island, data.dir = "F:/hawaii_local",
+                                      metric){
 
   month.path = sprintf("%s/Vars/%s/%s_%s/MonthlyMeans",data.dir, island, var, timestep)
   if (!file.exists(month.path)){
@@ -534,28 +535,20 @@ calculate.mean.monthly.ppt = function(daily.stuff, i, var,timestep, is.leap, isl
     time.index = time.index + days.in.month[d]
     month.ends = c(month.ends, time.index - 1) # - 1 is to correct for the starting position
   }
-  
+
+  metric.bit = ""
+  if (metric != ""){ metric.bit = sprintf("%s_", metric)}
   
   for (j in 1:12){
-    
-    # Allow the loss of the last two days if it is December of the last year of the simulation.
-    #**# Unclear why we lose 2 days. We should lose one due to the GMT offset.
-    #**# Not sure what happened to the other day - should consider looking into this further, as this could be a systematic problem in the calculations - if we're off by an hour somewhere, it could add up over 20 years.
-    if (j == 12 & i == 20){
-      if (month.ends[j] > dim(daily.stuff)[3]){
-        month.ends[j] = dim(daily.stuff)[3]
-        m1 = "Adjusting the mean calculation for the last month of the last year of the simulation."
-        m2 = "One day is lost due to the GMT offset. Unclear why another day would be lost."
-        warning(sprintf("%s %s last day of simulation year: %s", m1, m2, dim(daily.stuff)[3]))
-      }
-    }    
     mean.month.array = apply(daily.stuff[,,month.starts[j]:month.ends[j]], c(1,2), mean)
-    save(mean.month.array, file = sprintf("%s/%s_%s_%s_mean_ppt.rda", month.path, var, i, j))
+    save(mean.month.array, file = sprintf("%s/%s%s_%s_%s_mean.rda", month.path, metric.bit, var, i, j))
   }
 }
 
 #' Calculate monthly climatology
-calculate.monthly.climatologies = function(start.year, end.year, var, timestep, island, data.dir = "F:/hawaii_local"){
+calculate.monthly.climatologies = function(start.year, end.year, var, timestep,
+                                           island, data.dir = "F:/hawaii_local",
+                                           metric = ""){
   
   clim.path = sprintf("%s/Vars/%s/%s_%s/Climatology", data.dir, island, var, timestep)
   if (!file.exists(clim.path)){
@@ -564,15 +557,18 @@ calculate.monthly.climatologies = function(start.year, end.year, var, timestep, 
   
   days.in.typical.month = c(31,28,31,30,31,30,31,31,30,31,30,31)
   
+  metric.bit = ""
+  if (metric != ""){metric.bit = sprintf("%s_", metric)}
+  
   for (j in 1:12){
-    mean.monthly.path = sprintf("%s/Vars/%s/%s_%s/MonthlyMeans/%s_%s_%s_mean_ppt.rda", data.dir, island, var, timestep, var, start.year, j)
+    mean.monthly.path = sprintf("%s/Vars/%s/%s_%s/MonthlyMeans/%s%s_%s_%s_mean.rda", data.dir, island, var, timestep, metric.bit, var, start.year, j)
     #print(mean.monthly.path)
     load(mean.monthly.path) # loads the mean.month.array object
     climatology = mean.month.array
     # Prevent accidental reuse of the object
     rm(mean.month.array)
     for (i in (start.year + 1):end.year){
-      load(sprintf("%s/Vars/%s/%s_%s/MonthlyMeans/%s_%s_%s_mean_ppt.rda", data.dir, island, var, timestep, var, i, j)) # loads the mean.month.array object
+      load(sprintf("%s/Vars/%s/%s_%s/MonthlyMeans/%s%s_%s_%s_mean.rda", data.dir, island, var, timestep, metric.bit, var, i, j)) # loads the mean.month.array object
       climatology = climatology + mean.month.array
       # Prevent accidental re-use of the object
       rm(mean.month.array)
@@ -584,7 +580,7 @@ calculate.monthly.climatologies = function(start.year, end.year, var, timestep, 
     # Replace NA values with interpolated values #**# Long-term - should look into why NA's are even happening in the first place.
     climatology = interpolate.nas(climatology)
     
-    save(climatology, file = sprintf("%s/%s_month_%s.rda", clim.path, var, j))
+    save(climatology, file = sprintf("%s/%s%s_month_%s.rda", clim.path, metric.bit, var, j))
   }
 }
 
@@ -615,7 +611,8 @@ interpolate.nas = function(climatology){
 #' @param var The variable being examined
 #' @param is.leap an indicator for whether or not the year is a leap year
 #' 
-calculate.mean.annual.ppt = function(daily.stuff, i, var, timestep, is.leap, island, data.dir = "F:/hawaii_local"){
+calculate.mean.annual.var = function(daily.stuff, i, var, timestep, is.leap, island, data.dir = "F:/hawaii_local",
+                                     metric = ""){
   
   ann.path = sprintf("%s/Vars/%s/%s_%s/AnnualMeans", data.dir, island, var, timestep)
   if (!file.exists(ann.path)){
@@ -634,26 +631,32 @@ calculate.mean.annual.ppt = function(daily.stuff, i, var, timestep, is.leap, isl
       #warning(sprintf("Days adjusted for year %s to %s. One day's loss due to GMT offset was expected.", (i + 1989), days))
     }
   }
+  metric.bit = ""
+  if (metric != ""){ metric.bit = sprintf("%s_", metric)}
   
   mean.annual.array = apply(daily.stuff[,,1:days], c(1,2), mean)
-  save(mean.annual.array, file = sprintf("%s/%s_%s_mean_ppt.rda", ann.path, var, i))
+  save(mean.annual.array, file = sprintf("%s/%s%s_%s_mean.rda", ann.path, metric.bit, var, i))
     
 }
 
 #' Calculate annual climatology
-calculate.annual.climatologies = function(start.year, end.year, var, timestep, island, data.dir = "F:/hawaii_local"){
+calculate.annual.climatologies = function(start.year, end.year, var, timestep, island,
+                                          data.dir = "F:/hawaii_local", metric.bit = ""){
 
   clim.path = sprintf("%s/Vars/%s/%s_%s/Climatology", data.dir, island, var, timestep)
   if (!file.exists(clim.path)){
     dir.create(clim.path)
   }
   
-  load(sprintf("%s/Vars/%s/%s_%s/AnnualMeans/%s_%s_mean_ppt.rda", data.dir, island, var, timestep, var, start.year)) # loads the mean.annual.array object
+  metric.bit = ""
+  if (metric != ""){ metric.bit = sprintf("%s_", metric)}
+  
+  load(sprintf("%s/Vars/%s/%s_%s/AnnualMeans/%s%s_%s_mean.rda", data.dir, island, var, timestep, metric.bit, var, start.year)) # loads the mean.annual.array object
   climatology = mean.annual.array
   # Prevent accidental reuse of the object
   rm(mean.annual.array)
   for (i in (start.year + 1):end.year){
-    load(sprintf("%s/Vars/%s/%s_%s/AnnualMeans/%s_%s_mean_ppt.rda", data.dir, island, var, timestep, var, i)) # loads the mean.month.array object
+    load(sprintf("%s/Vars/%s/%s_%s/AnnualMeans/%s%s_%s_mean.rda", data.dir, island, var, timestep, metric.bit, var, i)) # loads the mean.month.array object
     climatology = climatology + mean.annual.array
     # Prevent accidental re-use of the object
     rm(mean.annual.array)
@@ -667,7 +670,7 @@ calculate.annual.climatologies = function(start.year, end.year, var, timestep, i
   # Remove any NA values through interpolation to avoid problems later on.
   climatology = interpolate.nas(climatology)
   
-  save(climatology, file = sprintf("%s/%s_Annual.rda", clim.path, var))
+  save(climatology, file = sprintf("%s/%s%s_Annual.rda", clim.path, metric.bit, var))
 }
 
 

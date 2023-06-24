@@ -1,7 +1,9 @@
 # Goal is to take daily data by year, and convert to GeoTifs
 require(terra)
 
-mean2geotif = function(base.path, island, variable, timestep, start.year, end.year, time.period, extra.bit){
+mean2geotif = function(base.path, island, variable, timestep,
+                       start.year, end.year, time.period, extra.bit,
+                       metric_bit = ""){
   if (time.period == 'annual'){
     data.path = sprintf("%s/%s/%s_%s/AnnualMeans", base.path, island, variable, timestep)
   }
@@ -23,12 +25,12 @@ mean2geotif = function(base.path, island, variable, timestep, start.year, end.ye
     # For each month # (Break early if doing annual)    
     for (month in 1:12){
       if (time.period == 'annual'){
-        in.file = sprintf("%s/%s_%s_mean%s.rda", data.path, variable, year - 1989, extra.bit)
-        csv.file = sprintf("%s_%s_mean%s.csv", variable, year - 1989, extra.bit)
+        in.file = sprintf("%s/%s%s_%s_mean%s.rda", data.path, metric.bit, variable, year - 1989, extra.bit)
+        csv.file = sprintf("%s%s_%s_mean%s.csv", metric.bit, variable, year - 1989, extra.bit)
       }
       if (time.period == 'monthly'){
-        in.file = sprintf("%s/%s_%s_%s_mean%s.rda", data.path, variable, year - 1989, month, extra.bit)
-        csv.file = sprintf("%s_%s_%s_mean%s.csv", variable, year - 1989, month, extra.bit)
+        in.file = sprintf("%s/%s%s_%s_%s_mean%s.rda", data.path, metric.bit, variable, year - 1989, month, extra.bit)
+        csv.file = sprintf("%s%s_%s_%s_mean%s.csv", metric.bit, variable, year - 1989, month, extra.bit)
       }
       load(in.file) # loads the mean.annual.array for annual and mean.month.array for monthly
       if (time.period == 'annual'){current.values = mean.annual.array  }

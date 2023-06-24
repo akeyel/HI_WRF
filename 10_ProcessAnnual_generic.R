@@ -1,4 +1,4 @@
-##### Convert from daily data to desired aggregates for precipitation #####
+##### Convert from daily data to desired aggregates #####
 
 
 ProcessAnnual = function(base.path, metric, variable, timestep,
@@ -24,17 +24,16 @@ ProcessAnnual = function(base.path, metric, variable, timestep,
     rm(day.array)
     
     # Process it to monthly and annual aggregates
-    #**# LEFT OFF HERE - NEED TO DETERMINE IF PPT VERSION WILL WORK FOR OTHER FILES (seems like it should? NEED TO CHECK)
     # Monthly should just be the sum of the time slice associated with a particular month
-    calculate.mean.monthly.ppt(daily.stuff, i, variable, timestep, is.leap, island, data.dir)
+    calculate.mean.monthly.var(daily.stuff, i, variable, timestep, is.leap, island, data.dir, metric)
     
     # Annual should just be the average of the entire ncdf file
     #year.path = sprintf("Vars/%s/%s_%s/AnnualPPT/AnnualPPT_%s_%s_year_%s.rda", island, variable, timestep, variable, timestep, i + 1989)
-    calculate.mean.annual.ppt(daily.stuff, i, variable, timestep, is.leap, island, data.dir)
+    calculate.mean.annual.var(daily.stuff, i, variable, timestep, is.leap, island, data.dir, metric)
   }
   
   # Create climatologies
-  calculate.monthly.climatologies(first.year, last.year, variable, timestep, island, data.dir)
-  calculate.annual.climatologies(first.year, last.year, variable, timestep, island, data.dir)
+  calculate.monthly.climatologies(first.year, last.year, variable, timestep, island, data.dir, metric)
+  calculate.annual.climatologies(first.year, last.year, variable, timestep, island, data.dir, metric)
 }
 

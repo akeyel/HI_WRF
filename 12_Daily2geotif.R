@@ -1,7 +1,9 @@
 # Goal is to take daily data by year, and convert to GeoTifs
+#**# ack01: Need to change precipitation workflow - changed this.var to variable to be more consistent.
+# also need to add var.label = "PPT" and metric.bit = ""
 require(terra)
 
-var = sprintf("%s_%s", this.var, timestep)
+var = sprintf("%s_%s", variable, timestep)
 island.grid = sprintf("%s/grids/wrf_grids/%s_xy_grid_index.csv", base.path, island)
 template.raster.file = sprintf("%s/grids/templates/%s_template.tif", base.path, island)
 template.raster = terra::rast(template.raster.file)
@@ -9,7 +11,7 @@ template.raster = terra::rast(template.raster.file)
 # Loop through year files
 for (year in start.year:end.year){
   message(sprintf("Now processing %s", year))
-  daily.path = sprintf("%s/%s/%s/DailyPPT", base.path, island, var)
+  daily.path = sprintf("%s/%s/%s/Daily%s", base.path, island, var, var.label)
   out.folder = sprintf("%s/CSV_for_Tifs/%s", daily.path, year)
   tif.path = sprintf("%s/int_tif/%s", daily.path, year)
   if (!file.exists(out.folder)){
@@ -21,7 +23,7 @@ for (year in start.year:end.year){
   
     
   # For each year
-  in.file = sprintf("%s/DailyPPT_%s_year_%s.rda", daily.path, var, year)
+  in.file = sprintf("%s/Daily%s_%s%s_year_%s.rda", daily.path, var.label, metric.bit, var, year)
   
   load(in.file) # loads the day.ppt.array object
   
@@ -30,11 +32,15 @@ for (year in start.year:end.year){
   #if (year %in% leap.years){  days = 366  } # This was incorrect - used the index position rather than the actual year.
   if (year %% 4 == 0){ days = 366 } # This will give a bad result for 1900 and 2100, but those years aren't in the data set.
   for (day in 1:days){
-    csv.file = sprintf("DailyPPT_%s_%s_%03.f.csv", var, year, day)
+    csv.file = sprintf("Daily%s_%s%s_%s_%03.f.csv", var.label, metric.bit, var, year, day)
     csv.file.full = sprintf("%s/%s",out.folder, csv.file)
 
-    # Subset out to that particular day
-    current.values = day.ppt.array[,,day]
+    if (var.label == 'PPT'){
+      # Subset out to that particular day
+      current.values = day.ppt.array[,,day]
+    }else{
+      current.values = day.array[,,day]
+    }
   
     # Export to .csv
     convert.to.csv(current.values, csv.file.full, island.grid, int100 = FALSE)
