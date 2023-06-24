@@ -173,8 +173,6 @@ if (climatology.to.raster == 1){
   }
 }
 
-#**# LEFT OFF HERE FOR KAUAI and MAUI, ON DOWNLOAD STEP FOR Hawaii. Need to transfer data to harddrive for Oahu
-## FOR NOW, NOT RUNNING THIS BLOCK - CAN WAIT UNTIL IT IS REQUESTED
 # STEP 12: Convert each day to csv, and then to raster
 #if (daily.to.raster == 1){
 #  for (island in islands){
@@ -194,6 +192,31 @@ if (climatology.to.raster == 1){
 #    }
 #  }
 #}
+
+# STEP 12b
+#if (check.daily.rasters == 1){
+#  bad.file.log = sprintf("%s/Vars/%s_bad_int_files.csv", data.dir, variable)
+#  for (island in islands){
+#    message(island)
+#    for (timestep in timesteps){
+#      for (metric in metrics){
+#        
+#        #**# THE FOLDER STRUCTURE USED BELOW DOES NOT QUITE MATCH THAT DEVELOPED IN THE PREVIOUS STEP. THESE WILL NEED TO BE HARMONIZED TO WORK, BUT I'M GOING TO WAIT
+#        #**# SINCE AT PRESENT THERE IS NO NEED FOR DAILY GEOTIFS FOR EACH VARIABLE.
+#        
+#        # From 03_SpatialInterpolateFunction.R, which might not be the most logical place to put this function, but I needed a script that was using the terra package
+#        in.dir = sprintf("%s/Vars/%s/%s_%s/Daily/%s_int_tif", data.dir, island, variable, timestep, metric)
+#        bad.files = check.raster.tifs(in.dir)
+#        cat(paste(c(island, timestep, metric), paste = collapse = " "), file = bad.file.log, append = TRUE)
+#        cat('\n', file = bad.file.log, append = TRUE)
+#        cat(paste(bad.files, collapse = ', '), file = bad.file.log, append = TRUE)
+#        cat('\n', file = bad.file.log, append = TRUE)
+#      }
+#    }
+#  }
+#}
+
+
 
 # STEP 13: Convert monthly and annual data to GeoTif
 means.to.raster = 0

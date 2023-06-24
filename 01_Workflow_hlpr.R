@@ -752,7 +752,6 @@ convert.to.csv = function(current.values, out.file, island.grid, int100 = FALSE)
   
 }
 
-
 #' Replace bad day in the daily data for Maui with prior day
 #' 
 fix.ppt.2007.365 = function(base.path){
