@@ -671,6 +671,7 @@ insert.interpolated.day = function(base.path, island, var){
   main.folder.nc = sprintf("%s_present/hourly", var)
   new.folder.nc = sprintf("%s_present/hourly_raw", var)
   #**# Fix this on download!
+  # Did not have R copy the files because R was very slow at copying the files
   if (!file.exists(new.folder.nc)){
     stop("Please rename the hourly folder hourly_raw. Please copy files 1000 - 52000 into a new hourly folder. The rest of the files will be filled in by the script.")
   }
