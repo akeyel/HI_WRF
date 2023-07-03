@@ -37,7 +37,7 @@ if (!file.exists(template.raster.file)){
 # Convert FROM .csv to .tif using spatial interpolation
 # template.raster 
 template.raster = terra::rast(template.raster.file)
-run.interpolation(base.path, tif.path, csv.file, template.raster, n.neighbors = 12, power = 2) # base.path, 
+run.interpolation(base.path, tif.path, csv.file, template.raster, n.neighbors = 12, power = 2, to.integer = 1) # base.path, 
 
 
 # Loop through months and process monthly climatologies

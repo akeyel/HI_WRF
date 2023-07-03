@@ -1,5 +1,35 @@
 # Assorted patches to bring data structure in line with code changes that occurred after processing
 
+#' Run just the climatology part of 10_ProcessAnnual_generic's ProcessAnnual function
+#' to correct bug where mean temperature was being multiplied by days in month or days in year.
+#' 
+fix.climatologies = function(code.dir, variable){
+  metrics = c('minimum', 'maximum', 'mean', 'median','midpoint') #**# Move to settings?
+  
+  #variable = "T2"
+  setwd(code.dir)
+  source("10_ProcessAnnual_generic.R")
+  source("01_Workflow_hlpr.R")
+  
+  is.cumulative = 0
+  for (island in islands){
+    # Loop through scenarios
+    for (timestep in timesteps){
+      for (metric in metrics){
+        message(sprintf("Running for %s %s %s", island, timestep, metric))
+        base.path = sprintf("%s/Vars/%s/%s_%s/Daily", data.dir, island, variable, timestep)
+        
+        setwd(base.path)
+        var = sprintf("%s_%s", variable, timestep)
+        
+        # Create climatologies
+        calculate.monthly.climatologies(first.year, last.year, variable, timestep, island, data.dir, metric, is.cumulative)
+        calculate.annual.climatologies(first.year, last.year, variable, timestep, island, data.dir, metric, is.cumulative)
+      }
+    }
+  }
+}
+
 #' Create HI Rainfall Atlas climatologies that are comparable to the WRF climatologies
 #' 
 #' 2023-03-26

@@ -10,7 +10,7 @@ mean2geotif = function(base.path, island, variable, timestep,
   if (time.period == "monthly"){
     data.path = sprintf("%s/%s/%s_%s/MonthlyMeans", base.path, island, variable, timestep)
   }
-  tif.path = sprintf("%s/tif", data.path)
+  tif.path = sprintf("%s/int_tif", data.path)
   csv.path = sprintf("%s/csv", data.path)
   if (!file.exists(tif.path)){  dir.create(tif.path, recursive = TRUE)  }
   if (!file.exists(csv.path)){  dir.create(csv.path, recursive = TRUE)  }

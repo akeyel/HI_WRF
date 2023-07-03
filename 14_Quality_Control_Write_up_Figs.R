@@ -3,9 +3,10 @@ library(rspat)
 
 # Create standardized plots for Results output
 create.qc.plots = function(data.folder, ref.folder, fig.folder, variable,
-                           use.ref, ref.type,
+                           metric, use.ref, ref.type,
                            island, island.bit, scenario, outline,
-                           do.main, do.supplement, do.extra
+                           do.main, do.supplement, do.extra, is.int = 1,
+                           ppt.bit = "_ppt"
                            ){
   
   # data.folder = "F:/hawaii_local/Vars/hawaii/RAINNC_present"
@@ -18,29 +19,38 @@ create.qc.plots = function(data.folder, ref.folder, fig.folder, variable,
   # outline = "F:/hawaii_local/Vector/hawaii_ne.shp"
   # ref.type = 'ppt'
 
+  metric.bit = ""
+  if (nchar(metric) > 0){ metric.bit = sprintf("%s_", metric)} # Add an underscore only if there is a non-blank metric
+  
+  int.bit = ""
+  if (is.int == 1){ int.bit = "int_"}
+  
   if (do.main == 1){
     # Fig. 1
     QC.Fig1(data.folder, ref.folder, fig.folder, variable, island, outline, use.ref, ref.type,
-            scenario = scenario)
+            metric.bit, is.int, int.bit, scenario = scenario)
     
     # Figs. 2 - 5
     QC.Fig.2to5(data.folder, ref.folder, fig.folder, variable, island, outline, use.ref, ref.type,
-                scenario = scenario)
+                metric.bit, is.int, int.bit, scenario = scenario)
   }
   
   if (do.supplement == 1){
+    #warning("Supplemental figures are not using integer rasters, just FYI")
+    #**# Annual means are currently not being produced as integer rasters, but climatologies apparently are? Should make this consistent.
     # Fig. S1
     QC.Fig.S1(data.folder, ref.folder, fig.folder, variable, outline, use.ref, ref.type,
-              island, island.bit, header = TRUE, scenario = scenario)
+              island, island.bit, metric.bit, is.int = is.int, int.bit = int.bit, header = TRUE, scenario = scenario, ppt.bit = ppt.bit)
     
     # Fig. S2
     QC.Fig.S2(data.folder, ref.folder, fig.folder, variable, outline, use.ref, ref.type,
-              island, island.bit, header = TRUE, scenario = scenario)
+              island, island.bit, metric.bit, is.int = is.int, int.bit = int.bit, header = TRUE, scenario = scenario, ppt.bit = ppt.bit)
   }
   
   if (do.extra == 1){
     # Plot as a percent of mean
-    QC.percent.mean(data.folder, ref.folder, fig.folder, variable, island, outline, ref.type)
+    QC.percent.mean(data.folder, ref.folder, fig.folder, variable, island, outline,
+                    ref.type, metric)
     
     # Plot as a percent of inter-annual variation
     QC.percent.variation(STUFF)
@@ -59,12 +69,16 @@ create.qc.plots = function(data.folder, ref.folder, fig.folder, variable,
 #'
 Comparison.Fig = function(data.file, ref.file, use.ref, outline,
                           header = FALSE, scenario = "",
-                          header2 = ""){
+                          header2 = "", is.int = 0){
   # Have option to just plot WRF if Reference is set to NA.
   # Plot WRF figure
   #**# Plot the data file with a standardized setting
   #**# Terra package? How to set break limits in R; this is usually something I do in Arc, but it'll go better if I can do it in R.
   r = rast(data.file) # How do we set break limits for the figure? probably not that hard, but for now, going with the defaults.
+  if (is.int == 1){
+    r = r / 100 # Convert back to original units
+  }
+  
   o = vect(outline)
   plot(r)
   polys(o)
@@ -91,9 +105,10 @@ Comparison.Fig = function(data.file, ref.file, use.ref, outline,
 }
 
 #' Figure 1. Pattern for annual climatology
-QC.Fig1 = function(data.folder, ref.folder, fig.folder, variable, island, outline, use.ref, ref.type,
+QC.Fig1 = function(data.folder, ref.folder, fig.folder, variable, island, outline,
+                   use.ref, ref.type, metric.bit, is.int, int.bit,
                    header = TRUE, scenario = "present"){
-  data.file = sprintf("%s/Climatology/tif/%s_Annual.tif", data.folder, variable)
+  data.file = sprintf("%s/Climatology/%stif/%s%s_Annual.tif", data.folder, int.bit, metric.bit, variable)
   
   ref.file = ""
   n.cols = 1
@@ -108,18 +123,18 @@ QC.Fig1 = function(data.folder, ref.folder, fig.folder, variable, island, outlin
   plot.width = 1400 * n.cols
   
   #out.file = sprintf("%s/%s_annual_climatology_plot.pdf", fig.folder, variable)
-  out.file = sprintf("%s/%s_%s_%s_annual_climatology_plot.tif", fig.folder, island, variable, scenario) 
+  out.file = sprintf("%s/%s_%s_%s_%sannual_climatology_plot.tif", fig.folder, island, variable, scenario, metric.bit) 
   tiff(filename = out.file, height = 1200, width = plot.width, res = c(300), compression = c('lzw'))
   #pdf(out.file)
   par(mfrow = c(1,n.cols))
-  Comparison.Fig(data.file, ref.file, use.ref, outline, header, scenario)
+  Comparison.Fig(data.file, ref.file, use.ref, outline, header, scenario, is.int = is.int)
   dev.off()
   message(sprintf("Fig %s created", out.file))
 }
 
 #' Fig. 2 Pattern for monthly climatology
 QC.Fig.2to5 = function(data.folder, ref.folder, fig.folder, variable, island, outline,
-                       use.ref, ref.type, scenario){
+                       use.ref, ref.type, metric.bit, is.int, int.bit, scenario){
  
   months = c('Jan','Feb','Mar',"Apr", 'May', "Jun", "Jul","Aug","Sep", "Oct", "Nov", "Dec")
   
@@ -129,12 +144,12 @@ QC.Fig.2to5 = function(data.folder, ref.folder, fig.folder, variable, island, ou
   
   count = 1 
   for (group in 1:4){
-    out.file = sprintf("%s/%s_%s_%s_climatology_months_%0.2d_%0.2d_plot.tif", fig.folder, island, variable, scenario, count, count + 2)
+    out.file = sprintf("%s/%s_%s_%s_%sclimatology_months_%0.2d_%0.2d_plot.tif", fig.folder, island, variable, scenario, metric.bit, count, count + 2)
     tiff(filename = out.file, height = 3600, width = plot.width, res = c(300), compression = c('lzw'))
     par(mfrow = c(3,n.cols))
     
     for (row in 1:3){
-      data.file = sprintf("%s/Climatology/tif/%s_month_%s.tif", data.folder, variable, count)
+      data.file = sprintf("%s/Climatology/%stif/%s%s_month_%s.tif", data.folder, int.bit, metric.bit, variable, count)
       
       ref.file = "" 
       if (!is.na(use.ref)){
@@ -146,7 +161,7 @@ QC.Fig.2to5 = function(data.folder, ref.folder, fig.folder, variable, island, ou
       header = FALSE
       if (row == 1){ header = TRUE }
       
-      Comparison.Fig(data.file, ref.file, use.ref, outline, header = header, scenario = scenario, header2 = months[count])
+      Comparison.Fig(data.file, ref.file, use.ref, outline, header = header, scenario = scenario, header2 = months[count], is.int = is.int)
       count = count + 1
     }
     dev.off()
@@ -156,18 +171,18 @@ QC.Fig.2to5 = function(data.folder, ref.folder, fig.folder, variable, island, ou
 
 # Fig. S1 Pattern for each individual year (1 * 20 = 20 plots)
 QC.Fig.S1 = function(data.folder, ref.folder, fig.folder, variable, outline,
-                     use.ref, ref.type, island, island.bit, header, scenario){
+                     use.ref, ref.type, island, island.bit, metric.bit, is.int, int.bit, header, scenario, ppt.bit){
   n.cols = 1
   if (!is.na(use.ref)){ n.cols = 3  }
   plot.width = 1400 * n.cols
   
-  out.file = sprintf("%s/%s_%s_%s_annual_plots.pdf", fig.folder, island, variable, scenario)
+  out.file = sprintf("%s/%s_%s_%s_%sannual_plots.pdf", fig.folder, island, variable, scenario, metric.bit)
   pdf(out.file)
   for (count in 1:20){
   #for (group in 1:5){
     par(mfrow = c(1,n.cols))
     
-    data.file = sprintf("%s/AnnualMeans/tif/%s_%s_mean_ppt.tif", data.folder, variable, count)
+    data.file = sprintf("%s/AnnualMeans/%stif/%s%s_%s_mean%s.tif", data.folder, int.bit, metric.bit, variable, count, ppt.bit)
     ref.file = ""
     if (!is.na(use.ref)){
       if (ref.type == 'ppt'){ 
@@ -175,7 +190,7 @@ QC.Fig.S1 = function(data.folder, ref.folder, fig.folder, variable, outline,
       }
     }
     
-    Comparison.Fig(data.file, ref.file, use.ref, outline, header, scenario)
+    Comparison.Fig(data.file, ref.file, use.ref, outline, header, scenario, is.int = is.int)
     message(sprintf("Plot %s of 20 completed", count))
   }
   dev.off()
@@ -183,14 +198,14 @@ QC.Fig.S1 = function(data.folder, ref.folder, fig.folder, variable, outline,
 
 # Fig. S2 Pattern for each individual month (20 * 12 = 240 plots)
 QC.Fig.S2 = function(data.folder, ref.folder, fig.folder, variable, outline,
-                     use.ref, ref.type, island, island.bit, header, scenario){
+                     use.ref, ref.type, island, island.bit, metric.bit, is.int, int.bit, header, scenario, ppt.bit){
   n.cols = 1
   if (!is.na(use.ref)){ n.cols = 3  }
   plot.width = 1400 * n.cols
   
   month.bits = c('Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec')
   
-  out.file = sprintf("%s/%s_%s_%s_monthly_plots.pdf", fig.folder, island, variable, scenario)
+  out.file = sprintf("%s/%s_%s_%s_%smonthly_plots.pdf", fig.folder, island, variable, scenario, metric.bit)
   pdf(out.file)
   for (year in 1:20){
     for (month in 1:12){
@@ -198,7 +213,7 @@ QC.Fig.S2 = function(data.folder, ref.folder, fig.folder, variable, outline,
       #for (group in 1:5){
       par(mfrow = c(1,n.cols))
       
-      data.file = sprintf("%s/MonthlyMeans/tif/%s_%s_%s_mean_ppt.tif", data.folder, variable, year, month)
+      data.file = sprintf("%s/MonthlyMeans/%stif/%s%s_%s_%s_mean%s.tif", data.folder, int.bit, metric.bit, variable, year, month, ppt.bit)
       ref.file = ""
       if (!is.na(use.ref)){
         if (ref.type == 'ppt'){ 
@@ -206,14 +221,14 @@ QC.Fig.S2 = function(data.folder, ref.folder, fig.folder, variable, outline,
         }
       }
       
-      Comparison.Fig(data.file, ref.file, use.ref, outline, header, scenario)
+      Comparison.Fig(data.file, ref.file, use.ref, outline, header, scenario, is.int = is.int)
       message(sprintf("Plot %s of 12 for year %s completed", month, year + 1989))
     }
   }
   dev.off()
 }
 
-QC.percent.mean = function(data.folder, ref.folder, fig.folder, variable, island, outline, ref.type){
+QC.percent.mean = function(data.folder, ref.folder, fig.folder, variable, island, outline, ref.type, metric){
   
   data.file = sprintf("%s/Climatology/tif/%s_Annual.tif", data.folder, variable)
   out.raster = sprintf("%s/Climatology/tif/%s_WRFminusRFAoverRFA.tif", data.folder, variable)

@@ -548,7 +548,7 @@ calculate.mean.monthly.var = function(daily.stuff, i, var,timestep, is.leap, isl
 #' Calculate monthly climatology
 calculate.monthly.climatologies = function(start.year, end.year, var, timestep,
                                            island, data.dir = "F:/hawaii_local",
-                                           metric = ""){
+                                           metric = "", is.cumulative = 1){
   
   clim.path = sprintf("%s/Vars/%s/%s_%s/Climatology", data.dir, island, var, timestep)
   if (!file.exists(clim.path)){
@@ -575,7 +575,9 @@ calculate.monthly.climatologies = function(start.year, end.year, var, timestep,
     }
   
     climatology = climatology / (end.year - start.year + 1)
-    climatology = climatology * days.in.typical.month[j]
+    if (is.cumulative == 1){
+      climatology = climatology * days.in.typical.month[j]
+    }
     
     # Replace NA values with interpolated values #**# Long-term - should look into why NA's are even happening in the first place.
     climatology = interpolate.nas(climatology)
@@ -641,7 +643,8 @@ calculate.mean.annual.var = function(daily.stuff, i, var, timestep, is.leap, isl
 
 #' Calculate annual climatology
 calculate.annual.climatologies = function(start.year, end.year, var, timestep, island,
-                                          data.dir = "F:/hawaii_local", metric.bit = ""){
+                                          data.dir = "F:/hawaii_local", metric.bit = "",
+                                          is.cumulative = 1){
 
   clim.path = sprintf("%s/Vars/%s/%s_%s/Climatology", data.dir, island, var, timestep)
   if (!file.exists(clim.path)){
@@ -664,8 +667,10 @@ calculate.annual.climatologies = function(start.year, end.year, var, timestep, i
   
   climatology = climatology / (end.year - start.year + 1)
   
-  # Multiply by number of days in a typical year
-  climatology = climatology * 365
+  if (is.cumulative == 1){
+    # Multiply by number of days in a typical year
+    climatology = climatology * 365
+  }
   
   # Remove any NA values through interpolation to avoid problems later on.
   climatology = interpolate.nas(climatology)

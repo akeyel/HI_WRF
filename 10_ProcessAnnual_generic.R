@@ -2,7 +2,7 @@
 
 
 ProcessAnnual = function(base.path, metric, variable, timestep,
-                         first.year, last.year, leap.years){
+                         first.year, last.year, leap.years, is.cumulative){
   setwd(base.path)
   var = sprintf("%s_%s", variable, timestep)
   
@@ -33,7 +33,7 @@ ProcessAnnual = function(base.path, metric, variable, timestep,
   }
   
   # Create climatologies
-  calculate.monthly.climatologies(first.year, last.year, variable, timestep, island, data.dir, metric)
-  calculate.annual.climatologies(first.year, last.year, variable, timestep, island, data.dir, metric)
+  calculate.monthly.climatologies(first.year, last.year, variable, timestep, island, data.dir, metric, is.cumulative)
+  calculate.annual.climatologies(first.year, last.year, variable, timestep, island, data.dir, metric, is.cumulative)
 }
 
