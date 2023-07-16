@@ -4,8 +4,8 @@
 require(terra)
 
 var = sprintf("%s_%s", variable, timestep)
-island.grid = sprintf("%s/grids/wrf_grids/%s_xy_grid_index.csv", base.path, island)
-template.raster.file = sprintf("%s/grids/templates/%s_template.tif", base.path, island)
+island.grid = sprintf("%s/grids/wrf_grids/%s_xy_grid_index.csv", code.dir, island)
+template.raster.file = sprintf("%s/grids/templates/%s_template.tif", code.dir, island)
 template.raster = terra::rast(template.raster.file)
 
 # Loop through year files

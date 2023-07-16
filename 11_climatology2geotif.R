@@ -15,8 +15,8 @@ require(terra)
 setwd(data.dir)
 
 #One raster for each island was interpolated using the HI Rainfall atlas grid
-template.raster.file = sprintf("%s/Vars/grids/templates/%s_template.tif", data.dir, island)
-island.grid = sprintf("Vars/grids/wrf_grids/%s_xy_grid_index.csv", island)
+template.raster.file = sprintf("%s/grids/templates/%s_template.tif", code.dir, island)
+island.grid = sprintf("%s/grids/wrf_grids/%s_xy_grid_index.csv", code.dir, island)
 months = seq(1,12)
 base.path = sprintf("Vars/%s/%s_%s/Climatology",island, variable, timestep)
 tif.path = sprintf("%s/int_tif", base.path)

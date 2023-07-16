@@ -1,0 +1,2 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata xml:lang="en"><Esri><CreaDate>20230130</CreaDate><CreaTime>21513400</CreaTime><ArcGISFormat>1.0</ArcGISFormat><SyncOnce>TRUE</SyncOnce><DataProperties><lineage><Process ToolSource="c:\program files (x86)\arcgis\desktop10.6\ArcToolbox\Toolboxes\Spatial Analyst Tools.tbx\Idw" Date="20230130" Time="215134">Idw "RAINNC_Annual.csv Events" values F:\hawaii_local\Vars\grids\templates\oahu_template.tif 0.00225 2 "VARIABLE 12" #</Process></lineage></DataProperties></Esri></metadata>

@@ -1,7 +1,7 @@
 # Goal is to take daily data by year, and convert to GeoTifs
 require(terra)
 
-mean2geotif = function(base.path, island, variable, timestep,
+mean2geotif = function(base.path, code.dir, island, variable, timestep,
                        start.year, end.year, time.period, extra.bit,
                        metric_bit = ""){
   if (time.period == 'annual'){
@@ -15,8 +15,8 @@ mean2geotif = function(base.path, island, variable, timestep,
   if (!file.exists(tif.path)){  dir.create(tif.path, recursive = TRUE)  }
   if (!file.exists(csv.path)){  dir.create(csv.path, recursive = TRUE)  }
   
-  island.grid = sprintf("%s/grids/wrf_grids/%s_xy_grid_index.csv", base.path, island)
-  template.raster.file = sprintf("%s/grids/templates/%s_template.tif", base.path, island)
+  island.grid = sprintf("%s/grids/wrf_grids/%s_xy_grid_index.csv", code.dir, island)
+  template.raster.file = sprintf("%s/grids/templates/%s_template.tif", code.dir, island)
   template.raster = terra::rast(template.raster.file)
   # For each year
   for (year in start.year:end.year){

@@ -241,11 +241,11 @@ if (means.to.raster == 1){
         
         # Convert Annual means to geotif
         message('processing annual data')
-        mean2geotif(base.path, island, variable, timestep, start.year, end.year, 'annual', extra.bit, metric.bit)
+        mean2geotif(base.path, code.dir, island, variable, timestep, start.year, end.year, 'annual', extra.bit, metric.bit)
         
         # Convert monthly means to geotif
         message("Processing monthly data")
-        mean2geotif(base.path, island, variable, timestep, start.year, end.year, 'monthly', extra.bit, metric.bit)
+        mean2geotif(base.path, code.dir, island, variable, timestep, start.year, end.year, 'monthly', extra.bit, metric.bit)
       }
     }
   }
