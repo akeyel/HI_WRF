@@ -14,7 +14,7 @@
 #     - Xiao Luo
 
 # Select Variable for analysis
-variable = "Q2" 
+variable = "T2" 
 
 #**# Change as needed
 # Code Directory
