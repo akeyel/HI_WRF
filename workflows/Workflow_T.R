@@ -14,7 +14,7 @@
 #     - Xiao Luo
 
 # Select Variable for analysis
-variable = "T2" 
+variable = "Q2" 
 
 #**# Change as needed
 # Code Directory
@@ -25,7 +25,8 @@ data.dir = "F:/hawaii_local"
 new.laptop = 1
 if (new.laptop == 1){
   code.dir = "C:/docs/science/HI_WRF"
-  data.dir = "D:/hawaii_local"
+  #data.dir = "D:/hawaii_local"
+  data.dir = "C:/docs/hawaii_local"
 }
 
 # Choose island (oahu, kauai, hawaii, maui) #**# Need to decide if running for all islands, or for each island separately - code is a mixture.
@@ -101,6 +102,7 @@ if (interpolate.day == 1){
   setwd(code.dir)
   source("06_Interpolate_Day.R") # Loads the functions from this script
   for (island in islands){
+    message(island)
     base.path = sprintf("%s/Vars/%s", data.dir, island)
     insert.interpolated.day(base.path, island, variable)
     for (scenario in timesteps){
