@@ -1,20 +1,12 @@
 # Process HI Temperature data from server
 
-# Created 2023-02-20 using the 00_Workflow_ppt.R as a template
+# Created 2023-06-24 using Workflow_T.R as a template
 
 # Authors: A.C. Keyel <akeyel@albany.edu>
 
-# Acknowledgements:
-#     - T. Giambelluca
-#     - O. Elison Timm
-#     - A. Frazier
-#     - L. Kaiser
-#     - K. Fandrich
-#     - L. Fortini
-#     - Xiao Luo
-
 # Select Variable for analysis
-variable = "Q2" 
+# Use for "UDROFF", "SFROFF"
+variable = "UDROFF" 
 
 #**# Change as needed
 # Code Directory
@@ -22,11 +14,10 @@ code.dir = 'C:/Users/ak697777/University at Albany - SUNY/Elison Timm, Oliver - 
 # Data Directory
 data.dir = "F:/hawaii_local"
 
-new.laptop = 1
+new.laptop = 0
 if (new.laptop == 1){
   code.dir = "C:/docs/science/HI_WRF"
-  #data.dir = "D:/hawaii_local"
-  data.dir = "C:/docs/hawaii_local"
+  data.dir = "D:/hawaii_local"
 }
 
 # Choose island (oahu, kauai, hawaii, maui) #**# Need to decide if running for all islands, or for each island separately - code is a mixture.
@@ -103,7 +94,6 @@ if (interpolate.day == 1){
   setwd(code.dir)
   source("06_Interpolate_Day.R") # Loads the functions from this script
   for (island in islands){
-    message(island)
     base.path = sprintf("%s/Vars/%s", data.dir, island)
     insert.interpolated.day(base.path, island, variable)
     for (scenario in timesteps){
@@ -145,10 +135,6 @@ if (create.aggregates == 1){
   setwd(code.dir)
   source("10_ProcessAnnual_generic.R")
   
-  # Determine whether to have a monthly total (e.g., monthly rainfall) or a monthly average (e.g., mean temperature)
-  is.cumulative = 0
-  if (variable == 'ppt'){ is.cumulative = 1  }
-  
   for (island in islands){
     # Loop through scenarios
     for (timestep in timesteps){
@@ -156,7 +142,7 @@ if (create.aggregates == 1){
         message(sprintf("Running for %s %s %s", island, timestep, metric))
         base.path = sprintf("%s/Vars/%s/%s_%s/Daily", data.dir, island, variable, timestep)
         ProcessAnnual(base.path, metric, variable, timestep,
-                                 first.year, last.year, leap.years, is.cumulative)
+                                 first.year, last.year, leap.years)
       }
     }
   }
@@ -180,24 +166,24 @@ if (climatology.to.raster == 1){
 }
 
 # STEP 12: Convert each day to csv, and then to raster
-if (daily.to.raster == 1){
-  for (island in islands){
-    message(island)
-    for(timestep in timesteps){
-      for (metric in metrics){
-        metric.bit = sprintf("%ss_", metric)
-        message(timestep)
-        message(metric)
-        setwd(code.dir)
-        base.path = sprintf("%s/Vars", data.dir)
-        start.year = 1990
-        end.year = 2009
-        var.label = "" # PPT for precipitation run
-        source("12_Daily2geotif.R")
-      }
-    }
-  }
-}
+#if (daily.to.raster == 1){
+#  for (island in islands){
+#    message(island)
+#    for(timestep in timesteps){
+#      for (metric in metrics){
+#        metric.bit = sprintf("%ss_", metric)
+#        message(timestep)
+#        message(metric)
+#        setwd(code.dir)
+#        base.path = sprintf("%s/Vars", data.dir)
+#        start.year = 1990
+#        end.year = 2009
+#        var.label = "" # PPT for precipitation run
+#        source("12_Daily2geotif.R")
+#      }
+#    }
+#  }
+#}
 
 # STEP 12b
 #if (check.daily.rasters == 1){
@@ -255,40 +241,4 @@ if (means.to.raster == 1){
 
 
 # STEP 14: Final Quality Control: Compare present-day WRF to Hawaii Rainfall Atlas
-do.qc = 0
-if (do.qc == 1){
-  setwd(code.dir)
-  source("14_Quality_COntrol_Write_up_Figs.R")
-  for (island in islands){
-    message(island)
-    for (timestep in timesteps){
-      for (metric in metrics){
-        message(timestep)
-        message(metric)
-        
-        data.folder = sprintf("%s/Vars/%s/%s_%s", data.dir, island, variable, timestep)
-        ref.folder = use.ref = ref.type = island.bit = NA
-        #**# The reference is not yet set up - but would like to include this for T2 once it is finished.
-        #if (variable == "T2"){
-        #  use.ref = 1
-        #  ref.folder = "FIXME!!!" #"F:/hawaii_local/Rainfall_Atlas/HawaiiRFGrids_mm/"
-        #  ref.type = "T2"
-        #}
-        fig.folder = sprintf("%s/QC/%s/%s_%s", data.dir, island, variable, timestep)
-        if (!file.exists(fig.folder)){
-          dir.create(fig.folder, recursive = TRUE)
-        }
-        outline = sprintf("%s/gis/Vector/%s_ne.shp", code.dir, island)
-        
-        do.main = do.supplement = 1
-        do.extra = 0 #**# The extra QC steps have not been scripted yet.
-        ppt.bit = ""
-
-        create.qc.plots(data.folder, ref.folder, fig.folder, variable, metric,
-                                   use.ref, ref.type,
-                                   island, island.bit, timestep, outline,
-                                   do.main, do.supplement, do.extra, ppt.bit = ppt.bit)
-      }
-    }
-  }
-}
+#**# NOT SCRIPTED (begun as part of XX_Quality_Control_Write_up_Figs.R)

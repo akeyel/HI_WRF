@@ -63,6 +63,69 @@ years # 20.0137 (because it doesn't account for leap years yet)
 #[12] "I_RAINNC" "LAI"      "LH"       "LU_INDEX" "LWP"      "PSFC"     "Q2"       "RAINNC"   "SNOW"     "SNOWC"    "SNOWH"   
 #[23] "T2"       "TSK"      "U10"      "V10" 
 
+
+# GOAL:
+vars = c("Q2", "PSFC", "TSK", "GSW", "GLW", "HFX", "GRDFLX", "LH", "CLDL", "CLDT", "LWP", "UDROFF", "SFROFF")
+
+vars = c("Q2", "PSFC", "GLW", "HFX", "LH", "UDROFF", "SFROFF")
+# Make a quick check that key variables are present and are not cumulative
+nc.file = get.data.file('oahu', 'present')
+pdf(file = "F:/hawaii_local/Supporting/VarCheck/Oahu_check.pdf")
+my.ncdf = nc_open(nc.file)
+for (var in vars){
+  this.var = sprintf("%s_present", var)
+  if (this.var %in% names(my.ncdf$var)){
+    par(mfrow = c(1,3))
+    var.vals = ncvar_get(my.ncdf, this.var, start = c(50,50,1), count = c(1,1,5000))
+    plot(var.vals)
+    mtext(sprintf("%s 1:5001", this.var))
+    var.vals2 = ncvar_get(my.ncdf, this.var, start = c(50,50,100000), count = c(1,1,5000))
+    plot(var.vals2)
+    mtext(sprintf("%s 100,000:105,001", this.var))
+    var.vals3 = ncvar_get(my.ncdf, this.var, start = c(50,50,165000), count = c(1,1,5000))
+    plot(var.vals3)
+    mtext(sprintf("%s 165,000:170,001", this.var))
+    
+  }#else{
+  #  #plot(1,1, col = 'white')
+  #  #mtext("%s is not in the 2D set")
+  #  message(var)
+  #} 
+}
+dev.off()
+nc_close(my.ncdf)
+# UDROFF and SFROFF are cumulative and need processing similar to what we did for Oahu and Kauai for precipitation
+# UDROFF and SFROFF are not in the Hawaii/Maui simulation it looks like.
+
+
+vars = c("Q2", "PSFC", "TSK", "GSW", "GLW", "HFX", "GRDFLX", "LH", "LWP") # "CLDL", "CLDT", "UDROFF", "SFROFF"
+
+nc.file = get.data.file('hawaii', 'present')
+pdf(file = "F:/hawaii_local/Supporting/VarCheck/Hawaii_check.pdf")
+my.ncdf = nc_open(nc.file)
+for (var in vars){
+  this.var = var
+  if (this.var %in% names(my.ncdf$var)){
+    par(mfrow = c(1,3))
+    var.vals = ncvar_get(my.ncdf, this.var, start = c(50,50,1), count = c(1,1,5000))
+    plot(var.vals)
+    mtext(sprintf("%s 1:5001", this.var))
+    var.vals2 = ncvar_get(my.ncdf, this.var, start = c(50,50,100000), count = c(1,1,5000))
+    plot(var.vals2)
+    mtext(sprintf("%s 100,000:105,001", this.var))
+    var.vals3 = ncvar_get(my.ncdf, this.var, start = c(50,50,165000), count = c(1,1,5000))
+    plot(var.vals3)
+    mtext(sprintf("%s 165,000:170,001", this.var))
+    
+  }#else{
+  #  #plot(1,1, col = 'white')
+  #  #mtext("%s is not in the 2D set")
+  #  message(var)
+  #} 
+}
+dev.off()
+
+
 # wrfout_d01_2006-01-04_000000
 test = nc_open('test')
 names(test$var)

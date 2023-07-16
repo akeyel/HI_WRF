@@ -22,8 +22,7 @@
 #'
 extract.annual.data = function(base.path, island, variable, scenario, new.dir,
                                GMT.offset, leap.years,
-                               cumulative = 0, testing = 0,
-                               check.negatives = 1){
+                               cumulative = 0, testing = 0){
   setwd(sprintf("%s/%s", base.path, island))
   var = sprintf("%s_%s", variable, scenario)
 
@@ -31,6 +30,12 @@ extract.annual.data = function(base.path, island, variable, scenario, new.dir,
     warning("Think about whether this extraction meets the needs of the current variable - some variables such as wind will likely need a custom extraction process")
   }
     
+  check.negatives = 1
+  if (variable %in% c("GLW", "HFX", "GSW", "GRDFLX")){
+    check.negatives = 0
+    message("Negative values are allowed for this variable")
+  }
+  
   # Make sure the daily directory exists, if not, create it
   day.path = sprintf("%s/%s", var, new.dir)
   if (!file.exists(day.path)){

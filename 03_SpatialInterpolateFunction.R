@@ -6,7 +6,8 @@
 # Also this tutorial for saving the file:
 # https://rspatial.org/spatial-terra/5-files.html
 
-if (!require("rspat")) remotes::install_github('rspatial/rspat')
+#if (!require("rspat")) remotes::install_github('rspatial/rspat')
+library(terra)
 library(caret) # Used for RMSE calculation
 library(gstat)
 
@@ -55,4 +56,40 @@ run.interpolation = function(csv.path, tif.path, in.csv, template.raster, n.neig
   }
   # Done!
 }
+
+
+#' Function to check that tifs are valid raster files that can be read and manipulated
+#'
+#' There was a problem where several files from Hawaii and one from Maui were corrupted as integer tifs and would not open.
+#' This script is intended to check that all files have opened and worked properly.
+#' 
+check.raster.tifs = function(in.dir){
+  require(terra)
+  # in.dir = "F:/hawaii_local/Supporting/check_raster_tifs_test"
+  my.folders = list.files(in.dir)
+  
+  bad.files = c()
+  for (folder in my.folders){
+    my.files = list.files(sprintf("%s/%s", in.dir, folder))
+    for (my.file in my.files){
+      is.bad = 1
+      
+      out = tryCatch({
+        max(rast(sprintf("%s/%s/%s", in.dir, folder, my.file)))
+        is.bad = 0
+      },
+      error = function(cond){
+        return(NA)
+      },
+      warning = function(cond){
+        return(NA)
+      })
+      if (is.bad == 1){
+        bad.files = c(bad.files, my.file)
+      }
+    }
+  }
+  return(bad.files)
+}
+
 
