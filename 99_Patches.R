@@ -1,5 +1,38 @@
 # Assorted patches to bring data structure in line with code changes that occurred after processing
 
+#' Fix corrupted int rasters based on feedback from Xiao
+#' 
+#' 2023-06-15
+#' 
+Fix.Ints = function(){
+  require(terra)
+  
+  bad.hi.tifs = seq(187,191)
+  good.tifs = "D:/hawaii_local/Vars/hawaii/RAINNC_present/DailyPPT/tif/1994"
+  int.path = "D:/hawaii_local/Vars/hawaii/RAINNC_present/DailyPPT/int_tif/1994"
+  
+  for (bad.tif in bad.hi.tifs[2:length(bad.hi.tifs)]){ # 1 was run manually
+    good.tif = sprintf("%s/DailyPPT_RAINNC_present_1994_%s.tif", good.tifs, bad.tif)
+    out.file = sprintf("%s/DailyPPT_RAINNC_present_1994_%s.tif", int.path, bad.tif)
+    nn = rast(good.tif)
+    out.rast = round(nn[[1]]*100, 0)
+    x <- writeRaster(out.rast, out.file, overwrite=TRUE, datatype = "INT4U") # [[1]] makes it a single band raster with the interpolated values
+    
+    
+  }
+
+  bad.m.tif = "040"
+  good.tif = sprintf("D:/hawaii_local/Vars/maui/RAINNC_present/DailyPPT/tif/1994/DailyPPT_RAINNC_present_1994_%s.tif", bad.m.tif)
+  out.file = sprintf("D:/hawaii_local/Vars/maui/RAINNC_present/DailyPPT/int_tif/1994/DailyPPT_RAINNC_present_1994_%s.tif", bad.m.tif)
+
+  nn = rast(good.tif)
+  out.rast = round(nn[[1]]*100, 0)
+  x <- writeRaster(out.rast, out.file, overwrite=TRUE, datatype = "INT4U") # [[1]] makes it a single band raster with the interpolated values
+  
+    
+}
+
+
 #' Run just the climatology part of 10_ProcessAnnual_generic's ProcessAnnual function
 #' to correct bug where mean temperature was being multiplied by days in month or days in year.
 #' 
