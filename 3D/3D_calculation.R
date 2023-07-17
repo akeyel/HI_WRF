@@ -31,18 +31,30 @@
 
 # NEED TO FIND DOCUMENTATION FOR THESE - may just reach out to Chunxi?
 
+# bottom_top variable may give heights of different layers - should look at this one!
+
 ## Calculate CWF
+# QCLOUD is Cloud Water Mixing Ratio, in kg / kg
+# CFRACT is the Total cloud fraction
+# LWP Is Liquid cloud water path
+# LWC needs to be in grams of water per cubic meter of air
 LWC = "QCLOUD?" #**# Pull from QCLOUD variable? But probably needs unit transformations
 # Will need density of air for unit transformation
+
+WindSpeed.10m = sqrt("U10"^2 + "V10"^2)
+WS = "etwas" # need to convert from 10 m windspeed to 2 m windspeed. May need HGT variable, which is the vegetation height.
 WS = "WS" #**# Pull from vertical and horizontal wind components, except need 2 m windspeed - need to know what lowest wind level of the simulation is, and need to use another equation to adjust to estimated 2 m windspeed. 
 # Oliver also said wind speeds were on an offset grid, so we'll need to think about that aspect as well - may need to interpolate to get the location of interest.
 
-CWF = (LWC / p_water) * WS * 3.6
+rho_water = 0.997045 # using this calculator at 25 C https://www.axeleratio.com/calc/water_density/form/Kell_equation.htm
+warning("Should adjust rho_water calculation to be calculated as a function of temperature and pressure")
+
+CWF = (LWC / rho_water) * WS * 3.6
 
 # Land surface model documentation should describe this
 ## Calculate A
-LAI = "etwas"
-canopy.height = "etwas"
+LAI = "LAI" # LAI is in the 3D data set
+canopy.height = "HGT"
 
 LAD = LAI / canopy.height
 A = 0.0164 * (LAD)**(-0.5)
