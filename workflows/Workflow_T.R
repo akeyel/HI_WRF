@@ -15,6 +15,8 @@
 
 # Select Variable for analysis
 variable = "T2" 
+metrics = c('minimum', 'maximum', 'mean', 'median','midpoint')
+
 
 #**# Change as needed
 # Code Directory
@@ -140,7 +142,6 @@ if (do.corrections == 1){
 }
 
 # STEP 10: Create daily, annual and monthly aggregates and climatologies
-metrics = c('minimum', 'maximum', 'mean', 'median','midpoint') #**# Move to settings?
 if (create.aggregates == 1){
   setwd(code.dir)
   source("10_ProcessAnnual_generic.R")
