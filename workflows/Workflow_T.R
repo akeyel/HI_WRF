@@ -14,7 +14,9 @@
 #     - Xiao Luo
 
 # Select Variable for analysis
-variable = "Q2" 
+variable = "T2" 
+metrics = c('minimum', 'maximum', 'mean', 'median','midpoint')
+
 
 #**# Change as needed
 # Code Directory
@@ -51,7 +53,7 @@ source("03_SpatialInterpolateFunction.R")
 
 # Load the data download function
 source("05_Data_Downloader_generic.R") # This version loads the Download_Var function. The ppt version is a script.
-
+source("05.5_CopyData.R") # This allows automatic adjustment of the file paths
 
 ##### Process data from web-available sources ######
 #### Process the Data #### 
@@ -93,7 +95,6 @@ if (download.data == 1){
         message(sprintf("%s_%s", variable, scenario))
         Download_Var(base.path, island, scenario, variable)
       }
-      
     }
   }
 }
@@ -104,8 +105,16 @@ if (interpolate.day == 1){
   source("06_Interpolate_Day.R") # Loads the functions from this script
   for (island in islands){
     message(island)
+    
+    # Adjust paths to prepare to interpolate a day for the present-day scenario
+    # From 05.5_CopyData.R by Kristen Sanfilippo
+    copy.raw.data(data.dir, island, variable)
+    
+    # Add an interpolated day (present scenario only)
     base.path = sprintf("%s/Vars/%s", data.dir, island)
     insert.interpolated.day(base.path, island, variable)
+    
+    # Add interpolated hours to end of simulation (all scenarios, to adjust for GMT -> local time conversion)
     for (scenario in timesteps){
       add.X.hours.var(base.path, island, variable, scenario, GMT.offset) 
     }
@@ -140,7 +149,6 @@ if (do.corrections == 1){
 }
 
 # STEP 10: Create daily, annual and monthly aggregates and climatologies
-metrics = c('minimum', 'maximum', 'mean', 'median','midpoint') #**# Move to settings?
 if (create.aggregates == 1){
   setwd(code.dir)
   source("10_ProcessAnnual_generic.R")
