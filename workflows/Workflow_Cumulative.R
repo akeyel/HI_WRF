@@ -14,10 +14,11 @@ code.dir = 'C:/Users/ak697777/University at Albany - SUNY/Elison Timm, Oliver - 
 # Data Directory
 data.dir = "F:/hawaii_local"
 
-new.laptop = 0
+new.laptop = 1
 if (new.laptop == 1){
   code.dir = "C:/docs/science/HI_WRF"
-  data.dir = "D:/hawaii_local"
+  #data.dir = "D:/hawaii_local"
+  data.dir = "C:/docs/hawaii_local"
 }
 
 # Choose island (oahu, kauai, hawaii, maui) #**# Need to decide if running for all islands, or for each island separately - code is a mixture.
@@ -89,15 +90,16 @@ if (download.data == 1){
   }
 }
 
+#**# LEFT OFF HERE - needs testing and then needs to be run. 
 # STEP 6: Correct the present day scenario to account for the missing day
 if (interpolate.day == 1){
   setwd(code.dir)
   source("06_Interpolate_Day.R") # Loads the functions from this script
   for (island in islands){
     base.path = sprintf("%s/Vars/%s", data.dir, island)
-    insert.interpolated.day(base.path, island, variable)
+    insert.interpolated.day(base.path, island, variable, method = 'cumulative')
     for (scenario in timesteps){
-      add.X.hours.var(base.path, island, variable, scenario, GMT.offset) 
+      add.X.hours.var(base.path, island, variable, scenario, GMT.offset, method = 'cumulative') 
     }
   }
 }

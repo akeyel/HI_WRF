@@ -621,10 +621,11 @@ add.X.hours.ok = function(base.path, island, scenario, GMT.offset){
 }
 
 
-#' This is a simple version for non-cumulative variables
+#' This is a simple version for non-cumulative and cumulative variables
 #' 
 #' (i.e. not for precipitation, where values are cumulative)
-add.X.hours.var = function(base.path, island, variable, scenario, GMT.offset){
+add.X.hours.var = function(base.path, island, variable, scenario, GMT.offset,
+                           method = 'noncumulative'){
   new.ending = 175320 + GMT.offset
   
   # open existing file (or files)
@@ -639,12 +640,22 @@ add.X.hours.var = function(base.path, island, variable, scenario, GMT.offset){
   nc.array[,,1:dims[3]] = var.data[,,1:dims[3]]
   
   # Read value for corresponding timesteps for interpolation
-  # Currently using the previous day's value, to maintain the same synoptic pattern
-  current.step = 320
+  last.step = 320
+  current.step = last.step
   for (i in 1:GMT.offset){
     current.step = current.step + 1
-    # Assign values to the next spot in the array
-    nc.array[,,current.step] = var.data[,,current.step - 24]
+    
+    if (method == 'noncumulative'){
+      # Currently using the previous day's value, to maintain the same synoptic pattern
+      
+      # Assign values to the next spot in the array
+      nc.array[,,current.step] = var.data[,,current.step - 24]
+    }
+    
+    if (method == 'cumulative'){
+      # Just have the cumulative variable stay what it was (no increase - same as previous observation)
+      nc.array[,,current.step] = var.data[,,last.step]
+    }
   }
   
   # Delete the existing file #**# FOR NOW, just renaming it - afraid of file corruption
@@ -658,26 +669,34 @@ add.X.hours.var = function(base.path, island, variable, scenario, GMT.offset){
   rm(hourly)
 }
 
-# Fix present time series for Hawaii and Maui for present-day precipitation
-# Need a separate function for Oahu/Kauai
-# missing I_RAIN variable actually makes this approach rather problematic, as there is no way to know what the total amount of missing rainfall was.
-# That may look more like a temperature interpolation.
-# Currently hard-coded to fix Jan 1, 1996
-insert.interpolated.day = function(base.path, island, var){
+#' Interpolate a single day for the present time series to get data to line up properly
+#' For non-cumulative variables, this will copy the prior day and have it repeat.
+#' For cumulative variables, it will attempt to fill in the values between the
+#' observation prior to the missing day and the observation following the missing day.
+#' This will not work for rainfall, as rainfall needs to combine the IRAIN and RAINNC variables
+#' Currently hard-coded to fix Jan 1, 1996
+#'
+#' @param base.path The path containing the hawaii data
+#' @param island The island being analyzed
+#' @param var The variable being analyzed
+#' @param method 'noncumulative' for noncumulative variables such as temperature,
+#' 'cumulative' for cumulative variables such as surface runoff
+#'
+insert.interpolated.day = function(base.path, island, var, method = 'noncumulative'){
   setwd(base.path)
   # Assumes data have been downloaded in chunks of 1000
   # Note that this will shift all files after Jan 1, 1996
   
   main.folder.nc = sprintf("%s_present/hourly", var)
   new.folder.nc = sprintf("%s_present/hourly_raw", var)
-  #**# Fix this on download!
-  # Did not have R copy the files because R was very slow at copying the files
+
+    # Did not have R copy the files because R was very slow at copying the files
   if (!file.exists(new.folder.nc)){
     stop("Please rename the hourly folder hourly_raw. Please copy files 1000 - 52000 into a new hourly folder. The rest of the files will be filled in by the script.")
   }
   
   #**# Should fix this so this issue does not arise in the first place.
-  if (sprintf("%s_RAINNC_%s_1e+05.rda", island, var) %in% list.files(new.folder.nc)){
+  if (sprintf("%s_%s_present_1e+05.rda", island, var) %in% list.files(new.folder.nc)){
     stop("Please rename 1e05 file to be 100000. R is being annoying about this.")
   }
   
@@ -685,7 +704,7 @@ insert.interpolated.day = function(base.path, island, var){
   jan1 = 365*24*6 + 24 + 1 # 365 days in a year, 24 hours in a day, for 6 years (1996 is year 7), plus one leap day (1996 leap day hasn't happened yet) + 1 to move to the new day
   
   # Read in the file
-  # load present day RAINNC
+  # load present day variable
   load(sprintf("%s_present/hourly_raw/%s_%s_present_53000.rda", var, island, var)) # loads the hourly object
   var.data = hourly
   rm(hourly)
@@ -703,8 +722,21 @@ insert.interpolated.day = function(base.path, island, var){
   # Fill in part BEFORE the patch
   nc.array[1:dims[1],1:dims[2],1:dec31] = var.data[1:dims[1], 1:dims[2], 1:dec31]
   
-  # Patch with prior day's values (only works for non-cumulative variables)
-  nc.array[1:dims[1],1:dims[2],jan2:(jan2.post - 1)] = var.data[1:dims[1],1:dims[2],(dec31 + 1):(dec31 + 24)]
+  # Fill in the interpolation
+  if (method == 'noncumulative'){
+    # Patch with prior day's values (only works for non-cumulative variables)
+    nc.array[1:dims[1],1:dims[2],jan2:(jan2.post - 1)] = var.data[1:dims[1],1:dims[2],(dec31 + 1):(dec31 + 24)]
+  }
+  if (method == 'cumulative'){
+    # Do interpolation
+    var.diff = var.data[1:dims[1], 1:dims[2], jan2] - var.data[1:dims[1], 1:dims[2], dec31]
+    hourly.increment = var.diff / 24
+    rain.amount = var.data[1:dims[1], 1:dims[2], dec31]
+    for (i in 1:24){
+      rain.amount = rain.amount + hourly.increment
+      nc.array[1:dims[1], 1:dims[2], dec31 + i] = rain.amount
+    }
+  }
   
   # Fill in AFTER the patch
   nc.array[1:dims[1], 1:dims[2], jan2.post:1000] =  var.data[1:dims[1], 1:dims[2], jan2:(1000 - 24)]
