@@ -1,5 +1,45 @@
 # Assorted patches to bring data structure in line with code changes that occurred after processing
 
+
+#' Get vegetation types for Hawaii/Maui
+#' 
+#' Not really a patch, but information I needed in a one-off manner
+Get.Veg.Types = function(){
+  library(ncdf4)
+  data.dir = "C:/docs/hawaii_local/3D_Files"
+  setwd(data.dir)
+  
+  # Path to netcdf file
+  data.files = list.files(data.dir)
+  #wrf.test.file = data.files[4] # Oahu/Kauai
+  wrf.test.file = data.files[5]
+  wrf = nc_open(wrf.test.file)
+  
+  dim1 = wrf$var$IVGTYP$varsize[1]
+  dim2 = wrf$var$IVGTYP$varsize[2]
+  dim3 = wrf$var$IVGTYP$varsize[3]
+  
+  IVGTYP = ncvar_get(wrf, "IVGTYP", start = c(1,1,1), count = c(dim1,dim2, dim3))
+  image(IVGTYP[,,1])
+  veg.classes = unique(as.vector(IVGTYP))
+  table(as.vector(IVGTYP))
+  # Hawaii/Maui
+  # 16  2  8 19  7 13  9  3  1 11 18
+  # 16 is water
+  
+  #    1       2       3       7       8       9      11      13      16      18      19 
+  # 8976   78288   18024   23736  183552    4200      24  158592 4175736     240   98832 
+  
+  # Oahu/Kauai
+  # 16  1  8  2 13  9 19  3 18 11  7
+  # Table of values. 7 is relatively rare. 16 is dominant.
+  #  1          2       3       7       8       9      11      13      16      18      19 
+  #  17568    9384   13008      72   19776    3504     288   64200 1804368     960    1872   
+  
+  # Same vegetation types for Hawaii/Maui as Oahu/Kauai
+  
+}
+
 #' Fix corrupted int rasters based on feedback from Xiao
 #' 
 #' 2023-06-15

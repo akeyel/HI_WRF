@@ -2,6 +2,11 @@
 
 # Created 2023-05-23 based on notes from December 2022
 
+# From attachment from Han:
+#CWI(mm/time) = A*CWF(mm/time)
+#CWF(mm/hr) = (LWC(g/m3) / rho_water(g/cm3) ) * WS(m/s) * 3.6 (mm3/cm3 * m2/mm2 * s/hr)
+
+
 library(ncdf4)
 
 # Read in 3D example file
@@ -10,7 +15,7 @@ setwd(data.dir)
 
 # Path to netcdf file
 data.files = list.files(data.dir)
-wrf.test.file = data.files[4]
+wrf.test.file = data.files[5] # Added a file!
 wrf = nc_open(wrf.test.file)
 
 # Identify selected points identified by Han as of interest
@@ -98,6 +103,8 @@ stop("Please check that the indices are actually pulling the correct values")
 
 # Pull out just the needed values
 loc.df$lcw = NA
+loc.df$cwf = NA
+loc.df$cwi = NA
 for (i in 1:nrow(loc.df)){
   dim1_index = loc.df$dim1_index[i]
   dim2_index = loc.df$dim2_index[i]
@@ -116,93 +123,77 @@ for (i in 1:nrow(loc.df)){
   
   liquid.cloud.water = rho_air * qcloud * 1000 # 1000 converts from kg to g
   
-  loc.df$lcw[i] = mean(liquid.cloud.water) 
+  # LWC = cloud liquid water content; amount of water in liquid form in the air, g/m3, qc in Katata et al. 2011, but different units
+  lcw = mean(liquid.cloud.water) 
+  loc.df$lcw[i] = lcw
   #test = ncvar_get(wrf, "QCLOUD", start = c(1,1,1,10), count = c(dim1, dim2, 1,1))
   #max(test) = 0.0008700828 Is this plausible? Recall, our test date is early January.
   
-   
-  #**# NOTE: Descriptive plots don't show much in the way of values for QCLOUD. Do we want QVAPOR instead? That has variation.
-  # Likely due to units - kg/kg can lead to small values for quantities that are in terms of grams.
+  ### CWF(mm/hr) = (LWC(g/m3) / rho_water(g/cm3) ) * WS(m/s) * 3.6 (mm3/cm3 * m2/mm2 * s/hr)
+  #rho_water = density of water (g/cm3)
+  rho_water = 0.997045 # using this calculator at 25 C https://www.axeleratio.com/calc/water_density/form/Kell_equation.htm
+  if (i == 1){
+    warning("Should adjust rho_water calculation to be calculated as a function of temperature and pressure") # Oliver said OK to just use a single value - differences are slight
+  }
+
+  # HGT gives terrain height. How do we get vegetation height?
+  # IVGTYP gives dominant vegetation category - does this determine vegetation height?
+  # VEGFRA gives vegetation fraction - is this relevant?
+  vegetation.category = ncvar_get(wrf, "IVGTYP", start = c(dim1_index,dim2_index, 1, 1), count = c(1,1,1,24))
+  roughness = 0.75 #**# Wikipedia said brush/forest was often in the range of 0.5 - 1.0 m, I assumed vegetation was brush/forest.
+  # https://www2.mmm.ucar.edu/wrf/users/tutorial/tutorial_presentations_2021.htm
+  # Tutorial on WRF Physics - Surface says roughness is in WRF based on land cover type. So we *SHOULD* be able to look this up.
+  # But I can't find it in the list of variables, and I can't find a table to define the land cover classes!
+  canopy.height = ETWAS
   
-  # OK. Start here for update to Tom, Oliver, and Han.
+  # See 99_Patches.R script to get a list of numeric vegetation classes Get.Veg.Types
+  # Still need to relate these to canopy.height and surface roughness.
+  
+  #WS = wind speed (m/s)
+  # Oliver also said wind speeds were on an offset grid, so we'll need to think about that aspect as well - may need to interpolate to get the location of interest.
+  U10 = ncvar_get(wrf, "U10", start = c(dim1_index,dim2_index, 1, 1), count = c(1,1,1,24))
+  V10 = ncvar_get(wrf, "V10", start = c(dim1_index,dim2_index, 1, 1), count = c(1,1,1,24))
+  wind.speed.10m = sqrt(U10^2 + V10^2)
+  wind.speed.10m.mean = mean(wind.speed.10m) # Convert to daily mean windspeed.
+  
+  # Tried:
+  # https://www.grc.nasa.gov/www/k-12/airplane/reynolds.html
+  # but this has a length, bulk viscosity, and a density, and I'm not really sure how to use those parameters.
+  
+  # This says we can use log wind profile and surface roughness to calculate it:
+  # https://www.researchgate.net/post/Is-that-possible-to-convert-wind-speed-measured-in-10-m-height-to-a-possible-2-m-height-wind-speed
+  # https://en.wikipedia.org/wiki/Log_wind_profile
+  if (i == 1){
+    warning("Wind speed was downscaled using a log wind profile in a Wikipedia article referenced in a ResearchGate question's answer and some bad assumptions about surface roughness")
+  }
+  # uz2 = uz1 * (ln(z2 - d) / z0) / (ln(z1 - d) / z0) 
+  # d = zero plane displacement
+  # the height in meters above the ground at which zero mean wind speed is achieved as a result of flow obstacles such as trees or buildings. This displacement can be approximated as 2/3 to 3/4 of the average height of the obstacles
+  d = canopy.height * (2/3) # Could also be 3/4 #**# CHECK WITH TOM and HAN
+  wind.speed = wind.speed.10m.mean * (log(10 - d)/roughness) / (log(2 - d)/rouhgness)
+
+  
+  # CWF: cloud water flux: amount of cloud/fog water supplied by the atmosphere; proportional to windspeed * liquid water content; horizontal depth or flux (mm/hr)
+  # U*p_air*qc in Katata et al. 2011 but different units
+  cwf = lcw * rho_water * wind.speed * 3.6 #**# Check if it is x rho_water or / rho_water
+  #CWF = (LWC / rho_water) * WS * 3.6
+  loc.df$cwf = cwf
+
+  ## Calculate A
+  # A canopy interception efficiency
+  # slope of Vd that depend on vegetation characteristics in Katata et al. 2008
+  # dimensionless, ratio of CWF converted to CWI; depends on characteristics of vegetation canopy
+  # Katata et al. 2011 A = 0.0164 * (LAD)**-0.5, LAD = LAI/canopy height
+  # bottom_top variable may give heights of different layers - should look at this one!
+  # Land surface model documentation should describe this
+  LAI = ncvar_get(wrf, "LAI", start = c(dim1_index,dim2_index, 1, 1), count = c(1,1,1,24)) # LAI is in the 3D data set
+  
+  LAD = LAI / canopy.height
+  A = 0.0164 * (LAD)**(-0.5)
+  
+  # CWI = cloud water content; amount of cloud/fog water caught by vegetation, measured as vertical depth or flux mm/hr; = Fqc in Katata et al. 2011 equation, but there kg/m2s
+  #CWI(mm/time) = A*CWF(mm/time)
+  cwi = A * cwf
+  loc.df$cwi = cwi
 }
 
-
-
-# Extract required variables from 3D example file
-# The notes are not very informative compared to what I recollect from the conversation:
-#Wind * liquid water content
-#QCLOUD * Windspeed
-#Windspeed = sqrt(U2 + V2)
-#Kg/kg -> g/m3
-#Want 2 m or vegetation height wind speed
-#Want stability or Reynolds
-
-# See instead attachment from Han:
-#CWI(mm/time) = A*CWF(mm/time)
-#CWF(mm/hr) = (LWC(g/m3) / rho_water(g/cm3) ) * WS(m/s) * 3.6 (mm3/cm3 * m2/mm2 * s/hr)
-
-#rho_water = density of water (g/cm3)
-#WS = wind speed (m/s)
-# CWI = cloud water content; amount of cloud/fog water caught by vegetation, measured as vertical depth or flux mm/hr; = Fqc in Katata et al. 2011 equation, but there kg/m2s
-# CWF: cloud water flux: amount of cloud/fog water supplied by the atmosphere; proportional to windspeed * liquid water content; horizontal depth or flux (mm/hr)
-# U*p_air*qc in Katata et al. 2011 but different units
-# LWC = cloud liquid water content; amount of water in liquid form in the air, g/m3, qc in Katata et al. 2011, but different units
-# A canopy interception efficiency
-# slope of Vd that depend on vegetation characteristics in Katata et al. 2008
-# dimensionless, ratio of CWF converted to CWI; depends on characteristics of vegetation canopy
-# Katata et al. 2011 A = 0.0164 * (LAD)**-0.5, LAD = LAI/canopy height
-
-# NEED TO FIND DOCUMENTATION FOR THESE - may just reach out to Chunxi?
-
-# bottom_top variable may give heights of different layers - should look at this one!
-
-# Assume liquid water cloud content kg / kg dry air
-# Can use density of dry air to get kg / m3 of dry air
-# Calculate air density based on ideal gas law - use temperature and pressure there
-
-# How do we know if cloud is at ground level for interception?
-# Vertical information on cloud layer for whether to call a cloud or not.
-
-## Calculate CWF
-# QCLOUD is Cloud Water Mixing Ratio, in kg / kg
-# CFRACT is the Total cloud fraction
-# LWP Is Liquid cloud water path
-# LWC needs to be in grams of water per cubic meter of air
-LWC = "QCLOUD?" #**# Pull from QCLOUD variable? But probably needs unit transformations
-# Will need density of air for unit transformation
-
-WindSpeed.10m = sqrt("U10"^2 + "V10"^2)
-WS = "etwas" # need to convert from 10 m windspeed to 2 m windspeed. May need HGT variable, which is the vegetation height.
-WS = "WS" #**# Pull from vertical and horizontal wind components, except need 2 m windspeed - need to know what lowest wind level of the simulation is, and need to use another equation to adjust to estimated 2 m windspeed. 
-# Oliver also said wind speeds were on an offset grid, so we'll need to think about that aspect as well - may need to interpolate to get the location of interest.
-
-
-rho_water = 0.997045 # using this calculator at 25 C https://www.axeleratio.com/calc/water_density/form/Kell_equation.htm
-warning("Should adjust rho_water calculation to be calculated as a function of temperature and pressure") # Oliver said OK to just use a single value - differences are slight
-
-CWF = (LWC / rho_water) * WS * 3.6
-
-# Land surface model documentation should describe this
-## Calculate A
-LAI = "LAI" # LAI is in the 3D data set
-canopy.height = "HGT"
-
-LAD = LAI / canopy.height
-A = 0.0164 * (LAD)**(-0.5)
-
-## Put it together
-CWI = A * CWF
-
-# Process required variables to be in the correct units
-
-# Apply equation to processed variables #**# or do they want to do this part?
-
-# Save final output in corrected format
-
-# Examine values at test locations
-test.lats = c(20.67465, 20.7598, 19.4152, 19.932, 21.506875)
-test.longs = c(-156.233308, -156.2482, -155.2385, -155.291, -158.145114)
-test.labels = c("Nakula", "ParkHQ", "Nahuku", "Laupaho ehoe", "Kaala")
-
-# Extract values from 3D data set at these locations and make basic plots
