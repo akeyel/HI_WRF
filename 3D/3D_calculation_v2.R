@@ -66,8 +66,6 @@ loc.df$dim1_index = NA
 loc.df$dim2_index = NA
 # Get row/col indices for locations
 for (i in 1:nrow(loc.df)){
-  #**# How?? This shouldn't be hard, but my brain is running like molasses today
-  #**# here is a stupid solution. I know there is a better one, but not getting there at the moment
   # Calculate the distance to all latitudes
   this.lat = loc.df$latitude[i]
   this.lon = loc.df$longitude[i]
@@ -139,20 +137,20 @@ for (i in 1:nrow(loc.df)){
   # HGT gives terrain height. How do we get vegetation height?
   # IVGTYP gives dominant vegetation category - does this determine vegetation height?
   # VEGFRA gives vegetation fraction - is this relevant?
-  vegetation.category = ncvar_get(wrf, "IVGTYP", start = c(dim1_index,dim2_index, 1, 1), count = c(1,1,1,24))
+  vegetation.category = ncvar_get(wrf, "IVGTYP", start = c(dim1_index,dim2_index, 1), count = c(1,1,1)) # 24 works for the 3rd dimension, but I'm assuming this does not change within a day? Does it change across seasons?
   roughness = 0.75 #**# Wikipedia said brush/forest was often in the range of 0.5 - 1.0 m, I assumed vegetation was brush/forest.
   # https://www2.mmm.ucar.edu/wrf/users/tutorial/tutorial_presentations_2021.htm
   # Tutorial on WRF Physics - Surface says roughness is in WRF based on land cover type. So we *SHOULD* be able to look this up.
   # But I can't find it in the list of variables, and I can't find a table to define the land cover classes!
-  canopy.height = ETWAS
+  canopy.height = 1 #**# used 1 as a placeholder. But what happens if it is 30 m? Seems like a conceptual flaw in the calculation
   
   # See 99_Patches.R script to get a list of numeric vegetation classes Get.Veg.Types
   # Still need to relate these to canopy.height and surface roughness.
   
   #WS = wind speed (m/s)
   # Oliver also said wind speeds were on an offset grid, so we'll need to think about that aspect as well - may need to interpolate to get the location of interest.
-  U10 = ncvar_get(wrf, "U10", start = c(dim1_index,dim2_index, 1, 1), count = c(1,1,1,24))
-  V10 = ncvar_get(wrf, "V10", start = c(dim1_index,dim2_index, 1, 1), count = c(1,1,1,24))
+  U10 = ncvar_get(wrf, "U10", start = c(dim1_index,dim2_index, 1), count = c(1,1,24))
+  V10 = ncvar_get(wrf, "V10", start = c(dim1_index,dim2_index, 1), count = c(1,1,24))
   wind.speed.10m = sqrt(U10^2 + V10^2)
   wind.speed.10m.mean = mean(wind.speed.10m) # Convert to daily mean windspeed.
   
@@ -170,12 +168,20 @@ for (i in 1:nrow(loc.df)){
   # d = zero plane displacement
   # the height in meters above the ground at which zero mean wind speed is achieved as a result of flow obstacles such as trees or buildings. This displacement can be approximated as 2/3 to 3/4 of the average height of the obstacles
   d = canopy.height * (2/3) # Could also be 3/4 #**# CHECK WITH TOM and HAN
-  wind.speed = wind.speed.10m.mean * (log(10 - d)/roughness) / (log(2 - d)/rouhgness)
-
+  wind.speed = wind.speed.10m * log((10 - d)/roughness) / log((2 - d)/roughness)
+  wind.speed = wind.speed.10m * log((2 - d)/roughness) / log((10 - d)/roughness) 
+  #**# changed not to use mean wind.speed - want to do calculations as fine-scale as possible
+  
+  wind.speed.bug = 1
+  if (wind.speed.bug == 1){
+    wind.speed = wind.speed.10m
+    warning("Using 10 m wind speed, because 2 m wind speed calculation is currently not working")
+  }
   
   # CWF: cloud water flux: amount of cloud/fog water supplied by the atmosphere; proportional to windspeed * liquid water content; horizontal depth or flux (mm/hr)
   # U*p_air*qc in Katata et al. 2011 but different units
-  cwf = lcw * rho_water * wind.speed * 3.6 #**# Check if it is x rho_water or / rho_water
+  cloud.water.flux = liquid.cloud.water * rho_water * wind.speed * 3.6 #**# Check if it is x rho_water or / rho_water
+  cwf = mean(cloud.water.flux)
   #CWF = (LWC / rho_water) * WS * 3.6
   loc.df$cwf = cwf
 
@@ -186,14 +192,17 @@ for (i in 1:nrow(loc.df)){
   # Katata et al. 2011 A = 0.0164 * (LAD)**-0.5, LAD = LAI/canopy height
   # bottom_top variable may give heights of different layers - should look at this one!
   # Land surface model documentation should describe this
-  LAI = ncvar_get(wrf, "LAI", start = c(dim1_index,dim2_index, 1, 1), count = c(1,1,1,24)) # LAI is in the 3D data set
+  LAI = ncvar_get(wrf, "LAI", start = c(dim1_index,dim2_index, 1), count = c(1,1,24)) # LAI is in the 3D data set
+  #**# Does LAI change hourly??? - yes - first value is different than 2nd value!!!
   
   LAD = LAI / canopy.height
   A = 0.0164 * (LAD)**(-0.5)
   
   # CWI = cloud water content; amount of cloud/fog water caught by vegetation, measured as vertical depth or flux mm/hr; = Fqc in Katata et al. 2011 equation, but there kg/m2s
   #CWI(mm/time) = A*CWF(mm/time)
-  cwi = A * cwf
+  cloud.water.content = A * cloud.water.flux
+  cwi = sum(cloud.water.content)
+  # Convert to daily cloud water caught by vegetation
   loc.df$cwi = cwi
 }
 
