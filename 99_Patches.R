@@ -6,6 +6,7 @@
 #' Not really a patch, but information I needed in a one-off manner
 Get.Veg.Types = function(){
   library(ncdf4)
+  library(terra)
   data.dir = "C:/docs/hawaii_local/3D_Files"
   setwd(data.dir)
   
@@ -14,6 +15,10 @@ Get.Veg.Types = function(){
   #wrf.test.file = data.files[4] # Oahu/Kauai
   wrf.test.file = data.files[5]
   wrf = nc_open(wrf.test.file)
+  
+  sink(file = "WRF_info.txt")
+  print(wrf)
+  sink()
   
   dim1 = wrf$var$IVGTYP$varsize[1]
   dim2 = wrf$var$IVGTYP$varsize[2]
@@ -37,6 +42,13 @@ Get.Veg.Types = function(){
   #  17568    9384   13008      72   19776    3504     288   64200 1804368     960    1872   
   
   # Same vegetation types for Hawaii/Maui as Oahu/Kauai
+
+  #**# LEFT OFF HERE - maybe just save out lat/lon with point value joined  
+  # Write out vegetation for identification with NLCD
+  IVGTYP.out = ncvar_get(wrf, "IVGTYP", start = c(1,1,1), count = c(dim1,dim2, 1)) # assume dim3 is constant for now.
+  grid.file = sprintf("%s_3D_xy_grid.csv", substr(wrf.test.file, 8,21))  
+  csv.file = "HM_Landcover.csv"
+  convert.to.csv(IVGTYP.out, csv.file, grid.file)
   
 }
 

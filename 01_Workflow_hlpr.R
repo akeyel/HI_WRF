@@ -67,6 +67,7 @@ make.data.grid = function(my.ncdf, island, grid.file){
   }
   
   if (island == "hawaii" | island == "maui"){
+    warning("looks like there is a bug in the HI/MAUI version - T2_present needs to be T2 I think")
     dim1 = my.ncdf$var$T2$varsize[1]
     dim2 = my.ncdf$var$T2$varsize[2]
   }
@@ -763,4 +764,21 @@ fix.ppt.2007.365 = function(base.path){
   load(sprintf("%s/DailyPPT_rainnc_rcp45_year_2007.rda", base.path)) # Loads the day.ppt.array
   day.ppt.array[,,365] = day.ppt.array[,,364]
   save(day.ppt.array, file = sprintf("%s/DailyPPT_rainnc_rcp45_year_2007.rda", base.path))
+}
+
+
+#' Get Canopy Height
+#' 
+#' @param vegetation.category The category from the IVGTYP variable in the WRF model output
+#' @param vegetation.lookup a lookup table with the vegetation heights and roughnesses by vegetation code
+#' 
+#' @return veg.vec a vector with canopy height, max surface roughness, and minimum surface roughness
+#' 
+get.canopy.height = function(vegetation.category, vegetation.lookup){
+  
+  veg.row = grep(sprintf("^%s$", vegetation.category), vegetation.lookup$LC_Code) # need ^ and $ to prevent 1 from matching 1 and 10, etc.
+  
+  veg.vec = c(vegetation.lookup$ZTOPV[veg.row], vegetation.lookup$Z0MAX[veg.row], vegetation.lookup$Z0MIN[veg.row])
+  
+  return(veg.vec)  
 }

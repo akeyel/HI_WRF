@@ -13,9 +13,15 @@ library(ncdf4)
 data.dir = "C:/docs/hawaii_local/3D_Files"
 setwd(data.dir)
 
+code.dir = "C:/docs/science/HI_WRF"
+source(sprintf("%s/01_Workflow_hlpr.R", code.dir))
+vegetation.lookup = read.csv(sprintf("%s/3D/VEGPARMTBL_USGS.csv", code.dir))
+roughness.type = "max" # options are 'max', 'min', 'custom'
+
 # Path to netcdf file
 data.files = list.files(data.dir)
-wrf.test.file = data.files[5] # Added a file!
+wrf.test.file = data.files[7] # Added a file!
+# "wrfout_d01_2006-01-03_000000" For Hawaii/Maui
 wrf = nc_open(wrf.test.file)
 
 # Identify selected points identified by Han as of interest
@@ -137,26 +143,27 @@ for (i in 1:nrow(loc.df)){
   # HGT gives terrain height. How do we get vegetation height?
   # IVGTYP gives dominant vegetation category - does this determine vegetation height?
   # VEGFRA gives vegetation fraction - is this relevant?
-  vegetation.category = ncvar_get(wrf, "IVGTYP", start = c(dim1_index,dim2_index, 1), count = c(1,1,1)) # 24 works for the 3rd dimension, but I'm assuming this does not change within a day? Does it change across seasons?
-  roughness = 0.75 #**# Wikipedia said brush/forest was often in the range of 0.5 - 1.0 m, I assumed vegetation was brush/forest.
-  # https://www2.mmm.ucar.edu/wrf/users/tutorial/tutorial_presentations_2021.htm
-  # Tutorial on WRF Physics - Surface says roughness is in WRF based on land cover type. So we *SHOULD* be able to look this up.
-  # But I can't find it in the list of variables, and I can't find a table to define the land cover classes!
-  canopy.height = 1 #**# used 1 as a placeholder. But what happens if it is 30 m? Seems like a conceptual flaw in the calculation
-  
   # See 99_Patches.R script to get a list of numeric vegetation classes Get.Veg.Types
-  # Still need to relate these to canopy.height and surface roughness.
+  vegetation.category = ncvar_get(wrf, "IVGTYP", start = c(dim1_index,dim2_index, 1), count = c(1,1,1)) # 24 works for the 3rd dimension, but I'm assuming this does not change within a day? Does it change across seasons?
+  veg.vec = get.canopy.height(vegetation.category, vegetation.lookup)
+  canopy.height = veg.vec[1]
+  max.roughness = veg.vec[2]
+  min.roughness = veg.vec[3] # Not sure what to do with this! How do we get the seasonal dependence?
   
+  roughness = NA
+  if (roughness.type == "max"){ roughness = max.roughness }
+  if (roughness.type == "min"){ roughness = min.roughness }
+  if (roughness.type == "custom"){ roughness = 0.1 * canopy.height }
+  #roughness = 0.1 * canopy.height # Per Han's email
+  #0.75 #**# Wikipedia said brush/forest was often in the range of 0.5 - 1.0 m, I assumed vegetation was brush/forest.
+  if (is.na(roughness)){ stop("Something went wrong during roughness assignment")}
+
   #WS = wind speed (m/s)
   # Oliver also said wind speeds were on an offset grid, so we'll need to think about that aspect as well - may need to interpolate to get the location of interest.
   U10 = ncvar_get(wrf, "U10", start = c(dim1_index,dim2_index, 1), count = c(1,1,24))
   V10 = ncvar_get(wrf, "V10", start = c(dim1_index,dim2_index, 1), count = c(1,1,24))
   wind.speed.10m = sqrt(U10^2 + V10^2)
   wind.speed.10m.mean = mean(wind.speed.10m) # Convert to daily mean windspeed.
-  
-  # Tried:
-  # https://www.grc.nasa.gov/www/k-12/airplane/reynolds.html
-  # but this has a length, bulk viscosity, and a density, and I'm not really sure how to use those parameters.
   
   # This says we can use log wind profile and surface roughness to calculate it:
   # https://www.researchgate.net/post/Is-that-possible-to-convert-wind-speed-measured-in-10-m-height-to-a-possible-2-m-height-wind-speed
@@ -167,16 +174,14 @@ for (i in 1:nrow(loc.df)){
   # uz2 = uz1 * (ln(z2 - d) / z0) / (ln(z1 - d) / z0) 
   # d = zero plane displacement
   # the height in meters above the ground at which zero mean wind speed is achieved as a result of flow obstacles such as trees or buildings. This displacement can be approximated as 2/3 to 3/4 of the average height of the obstacles
-  d = canopy.height * (2/3) # Could also be 3/4 #**# CHECK WITH TOM and HAN
-  wind.speed = wind.speed.10m * log((10 - d)/roughness) / log((2 - d)/roughness)
-  wind.speed = wind.speed.10m * log((2 - d)/roughness) / log((10 - d)/roughness) 
-  #**# changed not to use mean wind.speed - want to do calculations as fine-scale as possible
+  #**# What do we do if d is > 10 m?
+  d = canopy.height * 0.65 # Per Han's email
   
-  wind.speed.bug = 1
-  if (wind.speed.bug == 1){
+  wind.speed = wind.speed.10m * log((canopy.height - d)/roughness) / log((10 - d)/roughness) 
+  if (d > 10){
+    warning("Wind height scaling did not work. 10 m wind speed is below assumed 0 wind speed!, just using 10 m wind speed for now")
     wind.speed = wind.speed.10m
-    warning("Using 10 m wind speed, because 2 m wind speed calculation is currently not working")
-  }
+  } #  approach will have conceptual if not mathematical problems!"
   
   # CWF: cloud water flux: amount of cloud/fog water supplied by the atmosphere; proportional to windspeed * liquid water content; horizontal depth or flux (mm/hr)
   # U*p_air*qc in Katata et al. 2011 but different units
