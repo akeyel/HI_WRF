@@ -209,5 +209,10 @@ for (i in 1:nrow(loc.df)){
   cwi = sum(cloud.water.content)
   # Convert to daily cloud water caught by vegetation
   loc.df$cwi = cwi
+  
+  # Convert based on fraction of cell that is vegetated?
+  shdmax = ncvar_get(wrf, "SHDMAX", start = c(dim1_index, dim2_index, 1), count = c(1,1,24))
+  shdmin = ncvar_get(wrf, "SHDMIN", start = c(dim1_index, dim2_index, 1), count = c(1,1,24))
+  vegfra = ncvar_get(wrf, "VEGFRA", start = c(dim1_index, dim2_index, 1), count = c(1,1,24))
 }
 

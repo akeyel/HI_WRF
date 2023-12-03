@@ -1,5 +1,19 @@
 # Assorted patches to bring data structure in line with code changes that occurred after processing
 
+#' Look at vegetation fraction across Hawaii/Maui
+#' 
+View.Veg.Fraction = function(){
+  dim1 = wrf$var$T2$varsize[1]
+  dim2 = wrf$var$T2$varsize[2]
+  
+  vegfra = ncvar_get(wrf, "VEGFRA", start = c(1, 1, 1), count = c(dim1,dim2,24))
+  image(vegfra[,,1])
+  max(vegfra) #   [1] 98.00356
+  min(vegfra) # 0
+  
+  
+}
+
 
 #' Get vegetation types for Hawaii/Maui
 #' 
