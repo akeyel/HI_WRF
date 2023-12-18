@@ -782,3 +782,142 @@ get.canopy.height = function(vegetation.category, vegetation.lookup){
   
   return(veg.vec)  
 }
+
+make.loc.df = function(loc.df.file, islands, grid.path, wrf){
+  
+  if (islands == "hm"){
+    # Identify selected points identified by Han as of interest
+    location.labels = c("Nakula", "ParkHQ", "Nahuku", "Laupahoehoe")
+    loc.lats = c(20.674650, 20.759800, 19.415200, 19.932000)
+    loc.lons = c(-156.233308, -156.248200, -155.238500, -155.291000)
+  }
+  if (islands == 'ok'){
+    location.labels = c("Kaala")
+    loc.lats = c(21.506875)
+    loc.lons = c(-158.145114)
+  }
+  
+  loc.df = data.frame(location = location.labels, latitude = loc.lats, longitude = loc.lons)
+  
+  # Make a grid lookup to help in identifying coordinates
+  grid.file = sprintf("%s/%s_3D_xy_grid.csv", grid.path, islands)
+  if (!file.exists(grid.file)){
+    dim1 = wrf$var$T2$varsize[1]
+    dim2 = wrf$var$T2$varsize[2]
+    vals = ncvar_get(wrf, "T2", start = c(1,1,1), count = c(dim1,dim2,1))
+    lat = ncvar_get(wrf, "XLAT", start = c(1,1,1), count = c(dim1,dim2,1))
+    lon = ncvar_get(wrf, "XLONG", start = c(1,1,1), count = c(dim1,dim2,1))
+    xy.grid = data.frame(values = matrix(vals, ncol = 1), lat = matrix(lat, ncol = 1),
+                         lon = matrix(lon, ncol = 1),
+                         lat_index = sort(rep(seq(1,dim2), dim1)), lon_index = rep(seq(1,dim1), dim2))
+    
+    write.table(xy.grid, file = grid.file, sep = ',', row.names = FALSE, col.names = TRUE,
+                append = FALSE)
+    
+    #**# Temporary hack: make the points appear as white NAN values to show their location
+    #plotvals = vals
+    #for (i in 1:nrow(loc.df)){
+    #  if (i == 1){
+    #    plotvals[loc.df$dim1_index[i], loc.df$dim2_index[i]] = 315
+    #  }else{
+    #    plotvals[loc.df$dim1_index[i], loc.df$dim2_index[i]] = 260
+    #  }
+    #}
+    #image(plotvals)
+    
+    # Convert xy grid into a raster for plotting purposes
+    
+    # Plot the xy grid of temperature with the 5 points (actually 4, one will be outside the domain)
+    
+  }else{
+    xy.grid = read.csv(grid.file)
+  }
+  
+  lats = unique(xy.grid$lat)
+  lons = unique(xy.grid$lon)
+  loc.df$dim1_index = NA
+  loc.df$dim2_index = NA
+  # Get row/col indices for locations
+  for (i in 1:nrow(loc.df)){
+    # Calculate the distance to all latitudes
+    this.lat = loc.df$latitude[i]
+    this.lon = loc.df$longitude[i]
+    
+    # Calculate the distance to all longitudes
+    lat.dist = abs(this.lat - lats)
+    lon.dist = abs(this.lon - lons)
+    
+    # Use grid to look up nearest WRF coordinates
+    # identify the lat/lon with shortest distance
+    lat.min.pos = grep(min(lat.dist), lat.dist) # Assumes it is not equidistant - if this comes up modify the script!
+    lon.min.pos = grep(min(lon.dist), lon.dist) # ditto
+    if (length(max(c(lat.min.pos, lon.min.pos))) > 1){
+      stop("More than one minimum found, better code needed!")
+    }
+    matching.lat = lats[lat.min.pos]
+    matching.lon = lons[lon.min.pos]
+    
+    # Get position of the matching lat and lon
+    possible.lats = grep(matching.lat, xy.grid$lat)
+    possible.lons = grep(matching.lon, xy.grid$lon)
+    row.position = intersect(possible.lats, possible.lons)
+    
+    # append the row indices to the data frame
+    loc.df$dim1_index[i] = xy.grid$lon_index[row.position]
+    loc.df$dim2_index[i] = xy.grid$lat_index[row.position]
+  }
+
+  write.csv(loc.df, file = loc.df.file, row.names = FALSE)
+  #return(loc.df)
+}
+
+
+#' Wind Speed, WS = wind speed (m/s)
+#' 
+#' WRF wind speeds may be on an offset grid, but I think the Python script accounts for this
+
+get.wind.speed = function(canopy.height){
+
+  # Approach for downscaling wind speed using a log wind profile and surface roughness:
+  # Han confirmed the Wikipedia equation (at the time of scripting) was the correct equation to use 
+  # https://www.researchgate.net/post/Is-that-possible-to-convert-wind-speed-measured-in-10-m-height-to-a-possible-2-m-height-wind-speed
+  # https://en.wikipedia.org/wiki/Log_wind_profile
+  # uz2 = uz1 * (ln(z2 - d) / z0) / (ln(z1 - d) / z0) 
+  # d = zero plane displacement
+  # the height in meters above the ground at which zero mean wind speed is achieved as a result of flow obstacles such as trees or buildings. This displacement can be approximated as 2/3 to 3/4 of the average height of the obstacles
+  
+  d = canopy.height * 0.65 # Per Han's email
+  
+  # Check canopy height vs. wind speed height
+  # If canopy height <= 10m, use 10m wind speed
+  if (canopy.height <= 10){
+    U10 = ncvar_get(wrf, "U10", start = c(dim1_index,dim2_index, 1), count = c(1,1,24))
+    V10 = ncvar_get(wrf, "V10", start = c(dim1_index,dim2_index, 1), count = c(1,1,24))
+    height = 10
+    height.wind.speed = sqrt(U10^2 + V10^2)
+    #wind.speed.10m.mean = mean(wind.speed.10m) # Convert to daily mean windspeed.
+  }
+  
+  # If canopy height > 10 m, use 1st wind speed layer.
+  if (canopy.height > 10){
+    # Check 1st wind speed layer height
+    #**# LEFT OFF HERE
+    #**# NEED TO READ FROM ncdf file with wind speed heights
+    
+    # If canopy height > 1st wind speed layer height, then use 2nd wind speed layer. Should not need a higher wind speed layer than this - otherwise the Python code needs to be changed.
+    if (canopy.height > height){
+      #**# ALSO HERE
+    }
+    
+  }
+  
+  
+  wind.speed = height.wind.speed * log((canopy.height - d)/roughness) / log((height - d)/roughness) 
+  if (d > height){
+    warning(sprintf("Wind height scaling did not work. Wind speed is below assumed 0 wind speed! Using wind speed for height %s instead", height))
+    wind.speed = height.wind.speed
+  }
+  
+  return(wind.speed)
+}
+
