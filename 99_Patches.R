@@ -1,5 +1,243 @@
 # Assorted patches to bring data structure in line with code changes that occurred after processing
 
+#' Wind speed and LAI plot based on a year's data to share with Tom and Han
+#' 
+#' V2 got coopted to just be January. This one is going back to being all of 2004 (assuming no more bugs!)
+#' 
+Wind.Speed.Plot3 = function(){
+  require(lubridate)
+  #Q1 = read.csv("F:/hawaii_local/CWI_HAN/CWI_estimates_hm_2004_Q1.csv")
+  #Q2 = read.csv("F:/hawaii_local/CWI_HAN/CWI_estimates_hm_2004_Q2.csv")
+  #Q3 = read.csv("F:/hawaii_local/CWI_HAN/CWI_estimates_hm_2004_Q3.csv")
+  #Q4 = read.csv("F:/hawaii_local/CWI_HAN/CWI_estimates_hm_2004_Q4.csv")
+  Y2004 = read.csv("F:/hawaii_local/CWI_HAN/CWI_estimates_hm_2004_Q4.csv") #**# BUG! Accidentally turned off the part where the file reset.
+  #Y2004 = rbind(Q1,Q2,Q3,Q4)
+  #rm(Q1, Q2, Q3, Q4)
+  Y2004$date.temporary = sprintf("%s %s", Y2004$date, Y2004$hour - 1) # hour -1 so that it starts at 0
+  Y2004$date.R = ymd_h(Y2004$date.temporary, tz = 'UTC')
+  # OlsonNames() # Get a list of R-compatible time zones
+  Y2004$date.R.HI = with_tz(Y2004$date.R, "HST")
+  
+  Y2004$color = as.numeric(as.factor(Y2004$location))
+  plot(Y2004$date.R.HI, Y2004$LAI, col = as.factor(Y2004$location), ylab = "LAI", xlab = "Time")
+  legend(par('usr')[1],2, fill = seq(1,4), legend = c("Laupahoehoe", "Nahuku", "Nakula", "ParkHQ"))
+  
+  NAK = Y2004[Y2004$location == "Nakula", ]
+  plot(NAK$date.R.HI, NAK$level2.wind, col = 'white')
+  lines(NAK$date.R.HI, NAK$level2.wind, col = 'blue')
+  lines(NAK$date.R.HI, NAK$level1.wind, col = 'green')
+  lines(NAK$date.R.HI, NAK$wind10m, col = 'black')
+  lines(NAK$date.R.HI, NAK$canopy.estimated.wind.speed, col = 'purple')
+  
+  plot(NAK$date.R.HI, NAK$level2.wind - NAK$canopy.estimated.wind.speed, col = 'white', ylim = c(-4,7),
+       ylab = "Wind Speed Difference", xlab = "Time")
+  lines(NAK$date.R.HI, NAK$level2.wind - NAK$canopy.estimated.wind.speed, col = 'blue')
+  lines(NAK$date.R.HI, NAK$level1.wind - NAK$canopy.estimated.wind.speed, col = 'green')
+  lines(NAK$date.R.HI, NAK$wind10m - NAK$canopy.estimated.wind.speed, col = 'black')
+  
+  level2.bias = mean(NAK$level2.wind - NAK$canopy.estimated.wind.speed)
+  level1.bias = mean(NAK$level1.wind - NAK$canopy.estimated.wind.speed)
+  ws10m.bias = mean(NAK$wind10m - NAK$canopy.estimated.wind.speed)
+  
+  x = barplot(c(level2.bias, level1.bias, ws10m.bias), ylab = "Wind Speed difference", col = c('blue', 'green', 'black'))
+  axis(side = 1, at = x, labels = c("Level2", "Level1", "10m"))
+  
+  bias.plot = function(in.data, location){
+    level2.bias = mean(in.data$level2.wind - in.data$canopy.estimated.wind.speed)
+    level1.bias = mean(in.data$level1.wind - in.data$canopy.estimated.wind.speed)
+    ws10m.bias = mean(in.data$wind10m - in.data$canopy.estimated.wind.speed)
+    
+    x = barplot(c(level2.bias, level1.bias, ws10m.bias), ylab = "Wind Speed difference", col = c('blue', 'green', 'black'),
+                main = location)
+    axis(side = 1, at = x, labels = c("Level2", "Level1", "10m"))
+  }
+  
+  # Are biases consistent across sites?
+  PHQ = Y2004[Y2004$location == "ParkHQ", ]
+  NAH = Y2004[Y2004$location == "Nahuku", ]
+  LAU = Y2004[Y2004$location == "Laupahoehoe", ]
+  
+  par(mfrow = c(2,2))
+  bias.plot(NAK, "Nakula")
+  bias.plot(PHQ, "ParkHQ")
+  bias.plot(NAH, "Nahuku")
+  bias.plot(LAU, "Laupahoehoe")
+  
+  # Get mean height by site for each level - is ParkHQ 35 m lower than the others? That would suggest height above veg level. If it is the same, then it is height above ground level!
+  NAK.l2 = mean(NAK$level2.height)
+  PHQ.l2 = mean(PHQ$level2.height)
+  NAH.l2 = mean(NAH$level2.height)
+  LAU.l2 = mean(LAU$level2.height)
+  
+  NAK.l1 = mean(NAK$level1.height)
+  PHQ.l1 = mean(PHQ$level1.height)
+  NAH.l1 = mean(NAH$level1.height)
+  LAU.l1 = mean(LAU$level1.height)
+  
+  # Get mean annual wind speeds
+  NAK.l2.ws = mean(NAK$level2.wind)
+  PHQ.l2.ws = mean(PHQ$level2.wind)
+  NAH.l2.ws = mean(NAH$level2.wind)
+  LAU.l2.ws = mean(LAU$level2.wind)
+
+  NAK.l1.ws = mean(NAK$level1.wind)
+  PHQ.l1.ws = mean(PHQ$level1.wind)
+  NAH.l1.ws = mean(NAH$level1.wind)
+  LAU.l1.ws = mean(LAU$level1.wind)
+
+  NAK.10.ws = mean(NAK$wind10m)
+  PHQ.10.ws = mean(PHQ$wind10m)
+  NAH.10.ws = mean(NAH$wind10m)
+  LAU.10.ws = mean(LAU$wind10m)
+  
+  NAK.ws = mean(NAK$canopy.estimated.wind.speed)
+  PHQ.ws = mean(PHQ$canopy.estimated.wind.speed)
+  NAH.ws = mean(NAH$canopy.estimated.wind.speed)
+  LAU.ws = mean(LAU$canopy.estimated.wind.speed)
+  
+  # Calcualte for lcw, cwf, and cwi
+  NAK.lcw = mean(NAK$lcw[NAK$cwf > 0.01])
+  PHQ.lcw = mean(PHQ$lcw[PHQ$cwf > 0.01])
+  NAH.lcw = mean(NAH$lcw[NAH$cwf > 0.01])
+  LAU.lcw = mean(LAU$lcw[LAU$cwf > 0.01])
+  
+  # Get hours with fog
+  NAK.n.fog = length(NAK$lcw[NAK$cwf > 0.01])
+  PHQ.n.fog = length(PHQ$lcw[PHQ$cwf > 0.01])
+  NAH.n.fog = length(NAH$lcw[NAH$cwf > 0.01])
+  LAU.n.fog = length(LAU$lcw[LAU$cwf > 0.01])
+
+  # cwf
+  NAK.cwf = mean(NAK$cwf[NAK$cwf > 0.01])
+  PHQ.cwf = mean(PHQ$cwf[PHQ$cwf > 0.01])
+  NAH.cwf = mean(NAH$cwf[NAH$cwf > 0.01])
+  LAU.cwf = mean(LAU$cwf[LAU$cwf > 0.01])
+  
+  # Get mean annual CWI
+  NAK.cwi = sum(NAK$cwi)
+  PHQ.cwi = sum(PHQ$cwi)
+  NAH.cwi = sum(NAH$cwi)
+  LAU.cwi = sum(LAU$cwi)
+  
+  
+  
+}
+
+
+#' Wind speed and LAI plot based on a year's data to share with Tom and Han
+#' 
+Wind.Speed.Plot2 = function(){
+  require(lubridate)
+  Q1 = read.csv("F:/hawaii_local/CWI_HAN/CWI_estimates_hm_2004_Jan_test.csv") #**# Update when everything is finished processing - re-running for 2004.
+  #Q2 = read.csv("F:/hawaii_local/CWI_HAN/CWI_estimates_hm_2004_Q2.csv")
+  #Q3 = read.csv("F:/hawaii_local/CWI_HAN/CWI_estimates_hm_2004_Q3.csv")
+  #Q4 = read.csv("F:/hawaii_local/CWI_HAN/CWI_estimates_hm_2004_Q4.csv")
+  #Y2004 = rbind(Q1,Q2,Q3,Q4)
+  Y2004 = Q1 #**# Temporary
+  Y2004$date.temporary = sprintf("%s %s", Y2004$date, Y2004$hour - 1) # hour -1 so that it starts at 0
+  Y2004$date.R = ymd_h(Y2004$date.temporary, tz = 'UTC')
+  # OlsonNames() # Get a list of R-compatible time zones
+  Y2004$date.R.HI = with_tz(Y2004$date.R, "HST")
+  
+  plot(Y2004$date.R.HI, Y2004$LAI, col = as.factor(Y2004$location))
+
+  NAK = Y2004[Y2004$location == "Nakula", ]
+  plot(NAK$date.R.HI, NAK$level2.wind, col = 'white')
+  lines(NAK$date.R.HI, NAK$level2.wind, col = 'blue')
+  lines(NAK$date.R.HI, NAK$level1.wind, col = 'green')
+  lines(NAK$date.R.HI, NAK$wind10m, col = 'black')
+  lines(NAK$date.R.HI, NAK$canopy.estimated.wind.speed, col = 'purple')
+  
+  plot(NAK$date.R.HI, NAK$level2.wind - NAK$canopy.estimated.wind.speed, col = 'white', ylim = c(-4,7),
+       ylab = "Wind Speed Difference", xlab = "Time")
+  lines(NAK$date.R.HI, NAK$level2.wind - NAK$canopy.estimated.wind.speed, col = 'blue')
+  lines(NAK$date.R.HI, NAK$level1.wind - NAK$canopy.estimated.wind.speed, col = 'green')
+  lines(NAK$date.R.HI, NAK$wind10m - NAK$canopy.estimated.wind.speed, col = 'black')
+  
+  level2.bias = mean(NAK$level2.wind - NAK$canopy.estimated.wind.speed)
+  level1.bias = mean(NAK$level1.wind - NAK$canopy.estimated.wind.speed)
+  ws10m.bias = mean(NAK$wind10m - NAK$canopy.estimated.wind.speed)
+  
+  x = barplot(c(level2.bias, level1.bias, ws10m.bias), ylab = "Wind Speed difference", col = c('blue', 'green', 'black'))
+  axis(side = 1, at = x, labels = c("Level2", "Level1", "10m"))
+  
+  bias.plot = function(in.data, location){
+    level2.bias = mean(in.data$level2.wind - in.data$canopy.estimated.wind.speed)
+    level1.bias = mean(in.data$level1.wind - in.data$canopy.estimated.wind.speed)
+    ws10m.bias = mean(in.data$wind10m - in.data$canopy.estimated.wind.speed)
+    
+    x = barplot(c(level2.bias, level1.bias, ws10m.bias), ylab = "Wind Speed difference", col = c('blue', 'green', 'black'),
+                main = location)
+    axis(side = 1, at = x, labels = c("Level2", "Level1", "10m"))
+  }
+  
+  # Are biases consistent across sites?
+  PHQ = Y2004[Y2004$location == "ParkHQ", ]
+  NAH = Y2004[Y2004$location == "Nahuku", ]
+  LAU = Y2004[Y2004$location == "Laupahoehoe", ]
+
+  par(mfrow = c(2,2))
+  bias.plot(NAK, "Nakula")
+  bias.plot(PHQ, "ParkHQ")
+  bias.plot(NAH, "Nahuku")
+  bias.plot(LAU, "Laupahoehoe")
+
+  # Get mean height by site for each level - is ParkHQ 35 m lower than the others? That would suggest height above veg level. If it is the same, then it is height above ground level!
+  NAK.l2 = mean(NAK$level2.height)
+  PHQ.l2 = mean(PHQ$level2.height)
+  NAH.l2 = mean(NAH$level2.height)
+  LAU.l2 = mean(LAU$level2.height)
+  
+  NAK.l1 = mean(NAK$level1.height)
+  PHQ.l1 = mean(PHQ$level1.height)
+  NAH.l1 = mean(NAH$level1.height)
+  LAU.l1 = mean(LAU$level1.height)
+  
+}
+
+#' QC for wind speed calculation - we  seem not to be getting results consistent with the simulation with the downscaling equation
+#' 
+Wind.Speed.Plot = function(){
+  speeds = read.csv("F:/hawaii_local/Supporting/WS_check/WindSpeed_problem.csv")
+  
+  plot(speeds$Hour, speeds$H_10, col = 'white')
+  lines(speeds$Hour, speeds$H_10, col = 'black')
+  lines(speeds$Hour, speeds$C10_H1, col = 'green')
+  lines(speeds$Hour, speeds$C10_H2, col = 'blue')
+  
+  # Wind Speed Bias (absolute difference)
+  speeds$C10_H1_bias = speeds$H_10 - speeds$C10_H1
+  speeds$C10_H2_bias = speeds$H_10 - speeds$C10_H2
+  plot(speeds$Hour, speeds$C10_H1_bias, col = 'white')
+  lines(speeds$Hour, speeds$C10_H1_bias, col = 'green')
+  lines(speeds$Hour, speeds$C10_H2_bias, col = 'blue')
+  mean(speeds$C10_H1_bias) # 0.96, so basically a 1 m/s bias too slow!
+  mean(speeds$C10_H2_bias) # 0.96, so basically a 1 m/s bias too slow!
+  # But variable - some hours it is up to 3 m/s too slow.
+  
+  # Wind Speed Bias (percent)
+  speeds$C10_H1_bias_percent = (speeds$C10_H1_bias / speeds$H_10) * 100
+  speeds$C10_H2_bias_percent = (speeds$C10_H2_bias / speeds$H_10) * 100
+  plot(speeds$Hour, speeds$C10_H1_bias_percent, col = 'white', ylim = c(-50,100))
+  lines(speeds$Hour, speeds$C10_H1_bias_percent, col = 'green')
+  lines(speeds$Hour, speeds$C10_H2_bias_percent, col = 'blue')
+  mean(speeds$C10_H1_bias_percent) # 46% too low!
+  mean(speeds$C10_H2_bias_percent) # 38% too low!
+  
+  # Plot wind speed across dimensions
+  plot(speeds$Hour, speeds$H2_102.8, col = 'white', ylim = c(0,7),
+       xlab = "Hour", ylab = "Wind Speed (m/s)")
+  lines(speeds$Hour, speeds$H2_102.8, col = 'blue')
+  lines(speeds$Hour, speeds$C35_H2, col = 'purple')
+  lines(speeds$Hour, speeds$H1_29.9, col = 'green')
+  lines(speeds$Hour, speeds$H_10, col = 'black')
+  legend(par('usr')[1],par('usr')[4], legend = c('H102', 'Est35', 'H30', 'H10'), fill = c('blue', 'purple', 'green', 'black'))
+  
+  # Should we just use a 30 m height wind for the 35 m canopy??? That would be simple, and relatively straight forward, as long as the heights don't change that much.
+  # Email sent to Han, hope she's not out on vacation this week!
+}
+
+
 #' Look at vegetation fraction across Hawaii/Maui
 #' 
 View.Veg.Fraction = function(){
