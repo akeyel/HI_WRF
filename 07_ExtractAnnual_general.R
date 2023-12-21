@@ -22,7 +22,7 @@
 #'
 extract.annual.data = function(base.path, island, variable, scenario, new.dir,
                                GMT.offset, leap.years,
-                               cumulative = 0, testing = 0){
+                               method = 'noncumulative', testing = 0){
   setwd(sprintf("%s/%s", base.path, island))
   var = sprintf("%s_%s", variable, scenario)
 
@@ -83,7 +83,7 @@ extract.annual.data = function(base.path, island, variable, scenario, new.dir,
   file.length = 1000
   
   start.time = Sys.time()  
-  if (cumulative == 1){
+  if (method == 'cumulative'){
     last.hour = as.matrix(var.data[1:dim1,1:dim2,start], nrow = 1) # Convert to vector for subtraction
     cumulative.extraction.loop(variable, var, scenario, day.path,
                                start.index, end.index, start, end, total.timesteps,

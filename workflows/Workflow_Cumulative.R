@@ -120,7 +120,7 @@ if (extract.variables == 1){
       new.dir = "Daily"
       base.path = sprintf("%s/Vars", data.dir)
       extract.annual.data(base.path, island, variable, scenario, new.dir,
-                          GMT.offset, leap.years)
+                          GMT.offset, leap.years, method = 'cumulative') 
     }
   }
   create.aggregates = 1
