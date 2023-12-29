@@ -14,7 +14,7 @@ library(ncdf4)
 #**# Need to adjust script to be more flexible for time
 input.drive = "D" # "F" for Seagate, D for Elements
 output.drive = 'F'
-#**# Note that wind is on F drive still, so that is hardcoded below right now.
+wind.drive = output.drive # Location of wind heights may on a different hard drive
 #year = 2005
 islands = 'hm' 
 #islands = 'ok'
@@ -30,8 +30,8 @@ for (m in 1:length(year.vec)){
   
   # Read in 3D example file
   #data.dir = "C:/docs/hawaii_local/3D_Files"
-  if (islands == 'hm'){  data.in.dir = sprintf("%s:/hawaii_800m_present_%s/%s", input.drive, in.dir.bit, year)  }
-  if (islands == 'ok'){  data.in.dir = sprintf("%s:/kauai_oahu_800m_present_%s/%s", input.drive, in.dir.bit, year)  }
+  if (islands == 'hm'){  data.in.dir = sprintf("%s:/hawaii_800m_%s_%s/%s", input.drive, scenario, in.dir.bit, year)  }
+  if (islands == 'ok'){  data.in.dir = sprintf("%s:/kauai_oahu_800m_%s_%s/%s", input.drive, scenario, in.dir.bit, year)  }
   
   data.dir = sprintf("%s:/hawaii_local", output.drive)
   setwd(data.in.dir)
@@ -39,8 +39,8 @@ for (m in 1:length(year.vec)){
   #code.dir = "C:/docs/science/HI_WRF"
   code.dir = "C:/Users/ak697777/University at Albany - SUNY/Elison Timm, Oliver - CCEID/HI_WRF"
   source(sprintf("%s/01_Workflow_hlpr.R", code.dir))
-  if (islands == 'hm'){  height.dir = sprintf("%s:/wind_heights/hawaii_present/%s", output.drive, year)  }
-  if (islands == 'ok'){  height.dir = sprintf("%s:/wind_heights/kauai_oahu/%s", output.drive, year)   } #**# Watch for changes to path, may be _present!
+  if (islands == 'hm'){  height.dir = sprintf("%s:/wind_heights/hawaii_%s/%s", output.drive, scenario, year)  }
+  if (islands == 'ok'){  height.dir = sprintf("%s:/wind_heights/kauai_oahu_%s/%s", output.drive, scenario, year)   }
   
   
   vegetation.lookup = read.csv(sprintf("%s/3D/VEGPARMTBL_USGS.csv", code.dir))
@@ -68,7 +68,7 @@ for (m in 1:length(year.vec)){
   }
   if (length(missing.vec) > 0){
     message(paste(missing.vec, collapse = ' '))
-    #stop("one or or more data files do not have wind heights calculated. Please run Python script Extract_wind_level_height.py to calculate the 1st and 2nd layer wind heights")
+    stop("one or or more data files do not have wind heights calculated. Please run Python script Extract_wind_level_height.py to calculate the 1st and 2nd layer wind heights")
   }
   start.days = c(1,91,182, 274)
   end.days = c(90, 181, 273, 365)
@@ -84,7 +84,8 @@ for (m in 1:length(year.vec)){
     start.day = start.days[k]
     end.day = end.days[k]
     chunk.label = chunk.labels[k]
-    final.loc.file = sprintf("%s/CWI_HAN/CWI_estimates_%s_%s_%s.csv", data.dir, islands, year, chunk.label)
+    final.loc.file = sprintf("%s/CWI_HAN/%s/CWI_estimates_%s_%s_%s_%s.csv", data.dir, islands, islands,
+                             scenario, year, chunk.label)
     
     count = 0
     for (i in start.day:end.day){
