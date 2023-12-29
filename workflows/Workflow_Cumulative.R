@@ -149,6 +149,7 @@ if (create.aggregates == 1){
     }
   }
   climatology.to.raster = 1
+  means.to.raster = 1
 }
 
 # STEP 11: Convert annual and monthly climatologies to CSV and Raster (tif)
@@ -169,24 +170,24 @@ if (climatology.to.raster == 1){
 }
 
 # STEP 12: Convert each day to csv, and then to raster
-daily.to.raster = 0 # NOT RUN FOR EVERYTHING. CODE CHECKED FOR COMPATIBILITY FOR KAUAI PRESENT for 1990
-if (daily.to.raster == 1){
- for (island in islands){
-   message(island)
-   for(timestep in timesteps){
-     metric = 'total' # Only metric available for cumulative, needs to be total here, and not mean
-     metric.bit = sprintf("%s_", metric)
-     message(timestep)
-     message(metric)
-     setwd(code.dir)
-     base.path = sprintf("%s/Vars", data.dir)
-     start.year = 1990
-     end.year = 2009
-     var.label = "" # PPT for precipitation run
-     source("12_Daily2geotif.R")
-   }
- }
-}
+# daily.to.raster = 0 # NOT RUN FOR EVERYTHING. CODE CHECKED FOR COMPATIBILITY FOR KAUAI PRESENT for 1990
+# if (daily.to.raster == 1){
+#  for (island in islands){
+#    message(island)
+#    for(timestep in timesteps){
+#      metric = 'total' # Only metric available for cumulative, needs to be total here, and not mean
+#      metric.bit = sprintf("%s_", metric)
+#      message(timestep)
+#      message(metric)
+#      setwd(code.dir)
+#      base.path = sprintf("%s/Vars", data.dir)
+#      start.year = 1990
+#      end.year = 2009
+#      var.label = "" # PPT for precipitation run
+#      source("12_Daily2geotif.R")
+#    }
+#  }
+# }
 
 # STEP 12b
 #check.daily.rasters = 0
@@ -215,7 +216,6 @@ if (daily.to.raster == 1){
 
 
 # STEP 13: Convert monthly and annual data to GeoTif
-means.to.raster = 0
 if (means.to.raster == 1){
   setwd(code.dir)
   source("13_Means2geotif.R")
@@ -248,11 +248,11 @@ if (means.to.raster == 1){
       }
     }
   }
+  do.qc = 1
 }
 
 
 # STEP 14: Final Quality Control: Compare present-day WRF to Hawaii Rainfall Atlas
-do.qc = 0
 if (do.qc == 1){
   setwd(code.dir)
   source("14_Quality_COntrol_Write_up_Figs.R")
