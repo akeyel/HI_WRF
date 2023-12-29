@@ -1,0 +1,4 @@
+Data are derived from the Natural Earth County level admin 2 data set for the United States. These data are in the public domain.
+
+I belive this was the version documentation, but it was taken from a separate folder, so it is possible a slightly different version was used:
+ne_10m_admin_2_counties_lakes.README.html

@@ -623,7 +623,7 @@ add.X.hours.ok = function(base.path, island, scenario, GMT.offset){
 
 #' This is a simple version for non-cumulative and cumulative variables
 #' 
-#' (i.e. not for precipitation, where values are cumulative)
+#' # Not for precipitation where the I_RAIN and NC_RAIN conventions are used
 add.X.hours.var = function(base.path, island, variable, scenario, GMT.offset,
                            method = 'noncumulative'){
   new.ending = 175320 + GMT.offset

@@ -12,9 +12,9 @@ variable = "UDROFF"
 # Code Directory
 code.dir = 'C:/Users/ak697777/University at Albany - SUNY/Elison Timm, Oliver - CCEID/HI_WRF'
 # Data Directory
-data.dir = "F:/hawaii_local"
+data.dir = "D:/hawaii_local" # often F:
 
-new.laptop = 1
+new.laptop = 0
 if (new.laptop == 1){
   code.dir = "C:/docs/science/HI_WRF"
   #data.dir = "D:/hawaii_local"
@@ -22,7 +22,7 @@ if (new.laptop == 1){
 }
 
 # Choose island (oahu, kauai, hawaii, maui) #**# Need to decide if running for all islands, or for each island separately - code is a mixture.
-#island = 'kauai'
+island = 'kauai'
 
 hm.vec = c('hawaii', 'maui')
 ok.vec = c('oahu', 'kauai')
@@ -36,7 +36,7 @@ setwd(code.dir)
 source("01_Workflow_hlpr.R")
 
 # STEP 2: Load settings to run the precipitation analysis
-source("Settings/Settings_T.R")
+source("Settings/Settings.R")
 
 # Step 3: Load interpolation function
 source("03_SpatialInterpolateFunction.R")
@@ -90,7 +90,6 @@ if (download.data == 1){
   }
 }
 
-#**# LEFT OFF HERE - needs testing and then needs to be run. 
 # STEP 6: Correct the present day scenario to account for the missing day
 if (interpolate.day == 1){
   setwd(code.dir)
@@ -120,7 +119,7 @@ if (extract.variables == 1){
       new.dir = "Daily"
       base.path = sprintf("%s/Vars", data.dir)
       extract.annual.data(base.path, island, variable, scenario, new.dir,
-                          GMT.offset, leap.years)
+                          GMT.offset, leap.years, cumulative = 1)
     }
   }
   create.aggregates = 1
@@ -131,8 +130,9 @@ if (do.corrections == 1){
   #**# Watch for problems in Maui and HI for day 365 in year 2007
 }
 
-# STEP 10: Create daily, annual and monthly aggregates and climatologies
-metrics = c('minimum', 'maximum', 'mean', 'median','midpoint') #**# Move to settings?
+# STEP 10: Create daily, annual and monthly aggregates
+#metrics = c('minimum', 'maximum', 'mean', 'median','midpoint')
+metrics = c('mean') # Calculate the mean daily accumulation. For total accumulation, multiply by the number of days in the month or year
 if (create.aggregates == 1){
   setwd(code.dir)
   source("10_ProcessAnnual_generic.R")
@@ -144,7 +144,7 @@ if (create.aggregates == 1){
         message(sprintf("Running for %s %s %s", island, timestep, metric))
         base.path = sprintf("%s/Vars/%s/%s_%s/Daily", data.dir, island, variable, timestep)
         ProcessAnnual(base.path, metric, variable, timestep,
-                                 first.year, last.year, leap.years)
+                                 first.year, last.year, leap.years, is.cumulative = 1)
       }
     }
   }
@@ -152,6 +152,7 @@ if (create.aggregates == 1){
 }
 
 # STEP 11: Convert annual and monthly climatologies to CSV and Raster (tif)
+metrics = c(metrics, 'total') # Also make rasters for the total values
 if (climatology.to.raster == 1){
   for (island in islands){
     message(island)
@@ -168,26 +169,27 @@ if (climatology.to.raster == 1){
 }
 
 # STEP 12: Convert each day to csv, and then to raster
-#if (daily.to.raster == 1){
-#  for (island in islands){
-#    message(island)
-#    for(timestep in timesteps){
-#      for (metric in metrics){
-#        metric.bit = sprintf("%ss_", metric)
-#        message(timestep)
-#        message(metric)
-#        setwd(code.dir)
-#        base.path = sprintf("%s/Vars", data.dir)
-#        start.year = 1990
-#        end.year = 2009
-#        var.label = "" # PPT for precipitation run
-#        source("12_Daily2geotif.R")
-#      }
-#    }
-#  }
-#}
+daily.to.raster = 0 # NOT RUN FOR EVERYTHING. CODE CHECKED FOR COMPATIBILITY FOR KAUAI PRESENT for 1990
+if (daily.to.raster == 1){
+ for (island in islands){
+   message(island)
+   for(timestep in timesteps){
+     metric = 'total' # Only metric available for cumulative, needs to be total here, and not mean
+     metric.bit = sprintf("%s_", metric)
+     message(timestep)
+     message(metric)
+     setwd(code.dir)
+     base.path = sprintf("%s/Vars", data.dir)
+     start.year = 1990
+     end.year = 2009
+     var.label = "" # PPT for precipitation run
+     source("12_Daily2geotif.R")
+   }
+ }
+}
 
 # STEP 12b
+#check.daily.rasters = 0
 #if (check.daily.rasters == 1){
 #  bad.file.log = sprintf("%s/Vars/%s_bad_int_files.csv", data.dir, variable)
 #  for (island in islands){
@@ -214,9 +216,16 @@ if (climatology.to.raster == 1){
 
 # STEP 13: Convert monthly and annual data to GeoTif
 means.to.raster = 0
-setwd(code.dir)
-source("13_Means2geotif.R")
 if (means.to.raster == 1){
+  setwd(code.dir)
+  source("13_Means2geotif.R")
+
+  # Drop 'total', that was only calculated for the climatologies.
+  total.index = grep('total', metrics)
+  if (length(total.index) > 0){
+    metrics = metrics[-total.index]
+  }
+  
   for (island in islands){
     message(island)
     for (timestep in timesteps){
@@ -231,11 +240,11 @@ if (means.to.raster == 1){
         
         # Convert Annual means to geotif
         message('processing annual data')
-        mean2geotif(base.path, island, variable, timestep, start.year, end.year, 'annual', extra.bit, metric.bit)
+        mean2geotif(base.path, code.dir, island, variable, timestep, start.year, end.year, 'annual', extra.bit, metric.bit)
         
         # Convert monthly means to geotif
         message("Processing monthly data")
-        mean2geotif(base.path, island, variable, timestep, start.year, end.year, 'monthly', extra.bit, metric.bit)
+        mean2geotif(base.path, code.dir, island, variable, timestep, start.year, end.year, 'monthly', extra.bit, metric.bit)
       }
     }
   }
@@ -243,4 +252,35 @@ if (means.to.raster == 1){
 
 
 # STEP 14: Final Quality Control: Compare present-day WRF to Hawaii Rainfall Atlas
-#**# NOT SCRIPTED (begun as part of XX_Quality_Control_Write_up_Figs.R)
+do.qc = 0
+if (do.qc == 1){
+  setwd(code.dir)
+  source("14_Quality_COntrol_Write_up_Figs.R")
+  for (island in islands){
+    message(island)
+    for (timestep in timesteps){
+      for (metric in metrics){
+        message(timestep)
+        message(metric)
+        
+        data.folder = sprintf("%s/Vars/%s/%s_%s", data.dir, island, variable, timestep)
+        ref.folder = use.ref = ref.type = island.bit = NA
+        fig.folder = sprintf("%s/QC/%s/%s_%s", data.dir, island, variable, timestep)
+        if (!file.exists(fig.folder)){
+          dir.create(fig.folder, recursive = TRUE)
+        }
+        outline = sprintf("%s/gis/Vector/%s_ne.shp", code.dir, island)
+        
+        do.main = do.supplement = 1
+        do.extra = 0 #**# The extra QC steps have not been scripted yet.
+        ppt.bit = ""
+        
+        create.qc.plots(data.folder, ref.folder, fig.folder, variable, metric,
+                        use.ref, ref.type,
+                        island, island.bit, timestep, outline,
+                        do.main, do.supplement, do.extra, ppt.bit = ppt.bit)
+      }
+    }
+  }
+}
+

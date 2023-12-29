@@ -14,24 +14,28 @@ import os
 
 # See https://wrf-python.readthedocs.io/en/develop/internal_api/generated/wrf.g_geoht.get_height_agl.html
 
-# Code for running a year individually
-#my_path = r"F:\hawaii_800m_present_2004-2005\2004"
-#out_path = 'F:/wind_heights/hawaii_maui/2004'
-#my_path = r"F:\kauai_oahu_800m_present_2004-2009\2004"
-#out_path = 'F:/wind_heights/kauai_oahu/2004'
-#my_path = r"D:\hawaii_800m_present_2002-2003/2002"
-#out_path = 'F:/wind_heights/hawaii_present/2003'
-
 # Code set up for batching across years - could use an os.walk function, but this seems simpler and more controlled, somehow.
-out_path_base = 'F:/wind_heights/hawaii_present'
-path1 = r"D:\hawaii_800m_present_2004-2005"
-path2 = r"D:\hawaii_800m_present_2006-2007"
+out_drive = 'D'
+in_drive = 'F'
+island = 'hawaii' #  'kauai_oahu' # 
+scenario = 'rcp85' # 'rcp85' #'present'
+out_path_base = f'{out_drive}:/wind_heights/{island}_{scenario}' # formerly F, but changed drives
+in_path_base = f'{in_drive}:/{island}_800m_{scenario}'
+path_bits = ['1998-1999']*1 +  ['2000-2001'] * 2  + ['2002-2003'] * 2 + ['2004-2005'] * 2
+year_list = list(range(1999,2005 + 1)) # +1 is a reminder that the end range is not included.
+#path_bits = ['2002-2003']
+#year_list = ['2003']
 
-path_list = [path1, path1, path2, path2]
-year_list = [2004, 2005, 2006, 2007]
+#path1 = f"F:/{island}_800m_{scenario}_1990-1996" # Formerly D, but it mapped the drives opposite
+#path2 = f"F:/{island}_800m_{scenario}_1997-2003"
+#path3 = f'F:/{island}_800m_{scenario}_2004-2009'
 
-for j in range(len(path_list)):
-    my_path = f'{path_list[j]}/{year_list[j]}'
+#path_list = [path1] * 7 + [path2] * 7 + [path3]*6
+#year_list = list(range(2006,2009+1)) # Does not include last number!
+
+for j in range(len(year_list)):
+    my_path = f'{in_path_base}_{path_bits[j]}/{year_list[j]}'
+    #my_path = f'{path_list[j]}/{year_list[j]}'
     out_path = f'{out_path_base}/{year_list[j]}'
 
     if not os.path.exists(out_path):

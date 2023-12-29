@@ -26,7 +26,7 @@ extract.annual.data = function(base.path, island, variable, scenario, new.dir,
   setwd(sprintf("%s/%s", base.path, island))
   var = sprintf("%s_%s", variable, scenario)
 
-  if (!variable %in% c("T2")){
+  if (!variable %in% c("T2", "PSFC", "Q2", "SFROFF", "UDROFF", "GLW", "HFX", "GSW", "GRDFLX")){
     warning("Think about whether this extraction meets the needs of the current variable - some variables such as wind will likely need a custom extraction process")
   }
     
@@ -84,7 +84,8 @@ extract.annual.data = function(base.path, island, variable, scenario, new.dir,
   
   start.time = Sys.time()  
   if (cumulative == 1){
-    last.hour = as.matrix(var.data[1:dim1,1:dim2,start], nrow = 1) # Convert to vector for subtraction
+    #last.hour = as.matrix(var.data[1:dim1,1:dim2,start], nrow = 1) # Convert to vector for subtraction
+    last.hour = as.vector(var.data[1:dim1,1:dim2,start])
     cumulative.extraction.loop(variable, var, scenario, day.path,
                                start.index, end.index, start, end, total.timesteps,
                                var.data, dim1, dim2, file.end, file.length,
@@ -236,12 +237,12 @@ basic.extraction.loop = function(variable, var, scenario, day.path,
 }
 
 #' For precipitation like variables
-cumulative.extraction.loop = function(variable, scenario,
+cumulative.extraction.loop = function(variable, var, scenario, day.path,
                                       start.index, end.index, start, end, total.timesteps,
                                       var.data, dim1, dim2, file.end, file.length,
-                                      day, days, year){
-  stop("This function needs testing - code has been moved around since it was originally written. There are precipitation-specific functions if you are trying to extract precipitation data")
-  
+                                      day, days, year, check.negatives,
+                                      last.hour){
+
   while (start.index < total.timesteps){
     
     roll.over = 0
@@ -268,16 +269,41 @@ cumulative.extraction.loop = function(variable, scenario,
         end = end - file.length #file.end
         var.data = load.file(variable, scenario, file.end)
       }
-      this.hour = matrix(var.data[1:dim1,1:dim2,this.step], nrow = 1)
+      this.hour = as.vector(var.data[1:dim1,1:dim2,this.step])
       if (is.na(min(this.hour))){
         break
       }
-      this.delta = mapply(calc.precip, this.hour, last.hour)
+      # Special handling, because of the buckets for precipitation (simple subtraction was giving negative values, so assumed there was a missing bucket roll over. Warrants further investigation!)
+      if (variable == "PPT"){
+        this.delta = mapply(calc.precip, this.hour, last.hour)
+      }else{
+        # Otherwise, simple subtraction should do.
+        #message(length(this.hour))
+        #message(length(last.hour))
+        this.delta = this.hour - last.hour
+      }
       if (is.na(min(this.delta))){
         break
       }
       
+      if (check.negatives == 1){
+        if (min(this.delta) < 0){
+          warning(sprintf("Negative value detected for %s %s. These were replaced with 0.", day, year))
+          this.delta[this.delta < 0] = 0
+        }
+      }
+      
       this.delta = array(this.delta, dim = c(dim1, dim2, 1))
+
+      # # Add a check that a delta's values are not negative
+      #if (min(this.delta) < 0){
+      #  # Add a warning message about the negative values.
+      #  if (min(this.delta <0.01)){
+      #    message(sprintf("Negative value(s) up to %0.3f reported for %s %s. These were replaced with 0", min(this.delta), year, day))
+      #  }
+      #  # Replace negative values with 0's
+      #  this.delta[this.delta < 0] = 0
+      #}
       
       this.day = this.day + this.delta
       # update the last.hour object (can't just use var.data[,,(this.step - 1)]) because that will fail when the file rolls over.
@@ -286,22 +312,18 @@ cumulative.extraction.loop = function(variable, scenario,
     
     # Check for missing data
     
-    # # Add a check that a day's rainfall is not negative
-    if (min(this.day) < 0){
-      message(sprintf("Negative rainfall reported for %s %s", year, day))
-    }
     
     if (day == 1){
-      day.ppt.array = this.day
+      day.array = this.day
     }else{
-      day.ppt.array = array(c(day.ppt.array, this.day), dim = c(dim1, dim2, day)) #**# This may be a slow inefficient step - may want to think about faster ways if it's limiting.
+      day.array = array(c(day.array, this.day), dim = c(dim1, dim2, day)) #**# This may be a slow inefficient step - may want to think about faster ways if it's limiting.
     }
     
     # If this is the last day of the year
     if (day == days){
       # save the day file
-      daily.file = sprintf("%s/DailyPPT/DailyPPT_%s_year_%s.rda",var, var, year)
-      save(day.ppt.array, file = daily.file)
+      daily.file = sprintf("%s/Daily_total_%s_year_%s.rda",day.path, var, year)
+      save(day.array, file = daily.file)
       message(sprintf("Year %s completed", year))
       
       # reset the annual counters

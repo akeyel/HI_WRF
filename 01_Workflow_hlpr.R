@@ -583,7 +583,12 @@ calculate.monthly.climatologies = function(start.year, end.year, var, timestep,
     # Replace NA values with interpolated values #**# Long-term - should look into why NA's are even happening in the first place.
     climatology = interpolate.nas(climatology)
     
-    save(climatology, file = sprintf("%s/%s%s_month_%s.rda", clim.path, metric.bit, var, j))
+    if (is.cumulative == 0){
+      save(climatology, file = sprintf("%s/%s%s_month_%s.rda", clim.path, metric.bit, var, j))
+    }
+    if (is.cumulative == 1){
+      save(climatology, file = sprintf("%s/total_%s_month_%s.rda", clim.path, var, j)) # Change metric bit to distinguish it. Using metric, so that it can find the correct input path
+    }
   }
 }
 
@@ -676,7 +681,12 @@ calculate.annual.climatologies = function(start.year, end.year, var, timestep, i
   # Remove any NA values through interpolation to avoid problems later on.
   climatology = interpolate.nas(climatology)
   
-  save(climatology, file = sprintf("%s/%s%s_Annual.rda", clim.path, metric.bit, var))
+  if (is.cumulative == 0){
+    save(climatology, file = sprintf("%s/%s%s_Annual.rda", clim.path, metric.bit, var))
+  }
+  if (is.cumulative == 1){
+    save(climatology, file = sprintf("%s/total_%s_Annual.rda", clim.path, var)) # use metric bit to find input path, but for a cumulative output, the climatology should indicate that it was the total.
+  }
 }
 
 
@@ -782,6 +792,27 @@ get.canopy.height = function(vegetation.category, vegetation.lookup){
   
   return(veg.vec)  
 }
+
+#' Get Canopy Height or roughness
+#' 
+#' Modified to return a single output
+#' 
+#' @param vegetation.category The category from the IVGTYP variable in the WRF model output
+#' @param vegetation.lookup a lookup table with the vegetation heights and roughnesses by vegetation code
+#' 
+#' @return veg.vec a vector with canopy height, max surface roughness, and minimum surface roughness
+#' 
+get.veg.parameter = function(vegetation.category, vegetation.lookup, veg.parameter){
+  
+  veg.row = grep(sprintf("^%s$", vegetation.category), vegetation.lookup$LC_Code) # need ^ and $ to prevent 1 from matching 1 and 10, etc.
+  
+  if (veg.parameter == 'height'){  veg.out = vegetation.lookup$ZTOPV[veg.row]  }
+  if (veg.parameter == 'max'){     veg.out = vegetation.lookup$Z0MAX[veg.row]  }
+  if (veg.parameter == 'min'){     veg.out = vegetation.lookup$Z0MIN[veg.row]  }
+
+  return(veg.out)  
+}
+
 
 make.loc.df = function(loc.df.file, islands, grid.path, wrf){
   
