@@ -191,7 +191,7 @@ for (m in 1:length(year.vec)){
           if (is.na(roughness)){ stop("Something went wrong during roughness assignment")}
           
           # Calculate wind speed by downscaling from higher levels
-          stuff =get.wind.speed.v2(canopy.height, wrf, height.dir, data.files[i], dim1_index, dim2_index)
+          stuff =get.wind.speed.v2(canopy.height, roughness, wrf, height.dir, data.files[i], dim1_index, dim2_index)
           wind.speed = stuff[[1]]
           level2.wind = stuff[[2]]
           level1.wind = stuff[[3]]

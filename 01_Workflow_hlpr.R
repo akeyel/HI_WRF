@@ -968,8 +968,8 @@ get.wind.speed = function(canopy.height, wrf, height.dir, file.base, dim1_index,
 #' 
 #' WRF wind speeds may be on an offset grid, but I think the Python script accounts for this
 #' RETURN ALL the wind speeds and heights, to allow future adjustments to downscaling
-#**# NEEDS CHECKING!
-get.wind.speed.v2 = function(canopy.height, wrf, height.dir, file.base, dim1_index, dim2_index){
+#'
+get.wind.speed.v2 = function(canopy.height, roughness, wrf, height.dir, file.base, dim1_index, dim2_index){
   
   # Something odd is going on with windspeed and heights, so we're returning everything for now, so that alternative calculations can be made.
   d = canopy.height * 0.65 # Per Han's email
@@ -1022,3 +1022,107 @@ get.wind.speed.v2 = function(canopy.height, wrf, height.dir, file.base, dim1_ind
   return(list(wind.speed, level2.wind.speed, level1.wind.speed, wind.speed.10m, heights[2], heights[1]))
 }
 
+#' Wind Speed, WS = wind speed (m/s)
+#' 
+#' WRF wind speeds may be on an offset grid, but I think the Python script accounts for this
+#' Just using h2 wind speed here, because canopy height may vary across the island, and this keeps the
+#' code consistent throughout.
+#' 
+#' Adjusted to work for island-wide calculations
+#'
+get.wind.speed.for.island = function(canopy.height, roughness, i,
+                                     height.dir, in.file){
+  
+  # Something odd is going on with windspeed and heights, so we're returning everything for now, so that alternative calculations can be made.
+  d = canopy.height * 0.65 # Per Han's email
+
+  file.base = substr(in.file, 1, 21)
+  layer.winds = nc_open(sprintf("%s/%s_wind_heights.nc", height.dir, file.base))
+  height = ncvar_get(layer.winds, 'height_agl', start = c(1,1,2), count = c(-1,-1,1))
+  #dim(heights) # 455, 435, 2. No time variation - assumes that heights are constant within a day (within the entire simulation???)
+  nc_close(layer.winds)
+  
+  # Just using level 2 wind, to make the calculation easy and consistent.
+  U = read.this.var(data.in.dir, "U", i, GMT.offset)
+  U = U[1:455, 1:435, 2, 1:24]
+  V = read.this.var(data.in.dir, "V", i, GMT.offset)
+  V = V[1:455, 1:435, 2, 1:24]
+  # NOTE: dim(U) below assumes the grid correction above!
+    
+  height.wind.speed = sqrt(U^2 + V^2)
+  
+  # MOVE CANOPY HEIGHT, ROUGHNESS, AND HEIGHT INTO A TIME ARRAY FOR THE CALCULATION.
+  canopy.height = array(rep(canopy.height, 24), dim = dim(U))
+  height = array(rep(height, 24), dim = dim(U))
+  roughness = array(rep(roughness, 24), dim = dim(U))
+  
+  wind.speed = height.wind.speed * log((canopy.height - d)/roughness) / log((height - d)/roughness) 
+
+  return(list(wind.speed, height))
+}
+
+
+check.for.missing.files = function(data.files, data.in.dir, height.dir){
+  warning("Missing file check has not yet been coded. Script will crash if there are files in QCLOUD that are not in the other directories!")
+
+  #**# TEMPLATE THAT NEEDS TO BE EXPANDED FOR ALL VARIABLES
+  ## Check that heights are available for each data file
+  #missing.vec = c()
+  #for (i in 1:length(data.files)){
+  #  if (!file.exists(sprintf("%s/%s_wind_heights.nc", height.dir, data.files[i]))){
+  #    missing.vec = c(missing.vec, data.files[i])
+  #  }
+  #}
+  #if (length(missing.vec) > 0){
+  #  message(paste(missing.vec, collapse = ' '))
+  #  stop("one or or more data files do not have wind heights calculated. Please run Python script Extract_wind_level_height.py to calculate the 1st and 2nd layer wind heights")
+  #}
+}
+
+# Consider restructuring for improved efficiency
+read.this.var = function(data.in.dir, in.var, i, GMT.offset){
+
+  data.files = list.files(sprintf("%s/%s", data.in.dir, in.var))
+  
+  day.part.1 = sprintf("%s/%s", in.var, data.files[i]) # Read in the present day, but ignore the first GMT offset number of hours
+  day.part.2 = sprintf("%s/%s", in.var, data.files[i + 1])   # Add remaining hours from next day
+  #**# Needs special processing for the last day of the year - even though there IS a file for the next year, for the test example of 1999 for Oahu and Kauai Present, it had only a single hour's value, which is not enough.
+  day1.start.index = GMT.offset + 1 #**# is it plus 1? Double check this!!!
+  day1.count.index = 24 - GMT.offset #**# Is this right? DOUBLE CHECK THIS!!!
+  day2.start.index = 1
+  day2.count.index = GMT.offset #**# Is there a -1 here to account for the first entry? Except I think that's included in count, so no.
+  
+  wrf1 = nc_open(day.part.1)
+  wrf2 = nc_open(day.part.2)
+  # dimensions of qcloud 455 435  50  24
+  
+  if (in.var == "QCLOUD"){
+    part1 = ncvar_get(wrf1, in.var, start = c(1,1, 1, day1.start.index), count = c(-1,-1,1,day1.count.index))
+    part2 = ncvar_get(wrf2, in.var, start = c(1,1, 1, day2.start.index), count = c(-1,-1,1,day2.count.index))
+  }
+  if (in.var %in% c("V", "U")){
+    part1 = ncvar_get(wrf1, in.var, start = c(1,1, 1, day1.start.index), count = c(-1,-1,2,day1.count.index))
+    part2 = ncvar_get(wrf2, in.var, start = c(1,1, 1, day2.start.index), count = c(-1,-1,2,day2.count.index))
+  }
+  # If it is not one of the variables with multiple levels, just extract with 3 dimensions
+  if (!in.var %in% c("QCLOUD", "V", "U") ){
+    part1 = ncvar_get(wrf1, in.var, start = c(1,1, day1.start.index), count = c(-1,-1,day1.count.index))
+    part2 = ncvar_get(wrf2, in.var, start = c(1,1, day2.start.index), count = c(-1,-1,day2.count.index))
+  }
+#  if (dim.num == 4){
+#    part1 = ncvar_get(wrf1, in.var, start = c(1,1, 1, day1.start.index), count = c(-1,-1,1,day1.count.index)) #**# Saying exceeding count index!
+#    part2 = ncvar_get(wrf2, in.var, start = c(1,1, 1, day2.start.index), count = c(-1,-1,1,day2.count.index))
+#  }
+#  if (dim.num == 3){
+#    #part1 = ncvar_get(wrf1, in.var, start = c(1,1,1), count = c(-1,-1,-1)) # Getting 455 x 435. Looks like we're missing the time dimension! Copy error?
+#    part1 = ncvar_get(wrf1, in.var, start = c(1,1, day1.start.index), count = c(-1,-1,day1.count.index))
+#    part2 = ncvar_get(wrf2, in.var, start = c(1,1, day2.start.index), count = c(-1,-1,day2.count.index))
+#  }
+  out.var = abind::abind(part1, part2) # Checked on 2024-01-03, looks like array joined correctly.
+  nc_close(wrf1)
+  nc_close(wrf2)
+  #wrf.dims = dim(out.var) 
+  #dim1 = wrf.dims[1]
+  #dim2 = wrf.dims[2]
+  return(out.var)  
+}
