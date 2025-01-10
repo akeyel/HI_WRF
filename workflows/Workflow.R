@@ -37,7 +37,6 @@ if (new.laptop == 1){
 hm.vec = c('hawaii', 'maui')
 ok.vec = c('oahu', 'kauai')
 islands = c(ok.vec, hm.vec)
-#scenarios = c('present', 'rcp45', 'rcp85') # equivalent to timesteps defined in precip settings
 
 ##### SET UP THE ANALYSIS #####
 setwd(code.dir)

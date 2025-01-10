@@ -1,7 +1,7 @@
 # Goal is to perform descriptive analyses of initial measurements of CWI
 # for Han's locations.
 
-base.path = 'D:/hawaii_local/CWI_Han'
+base.path = 'CWI/'
 
 # Look at CWI for different years for Hawaii/Maui
 years = c(2000, 2001, 2002, 2004, 2005, 2006, 2007)

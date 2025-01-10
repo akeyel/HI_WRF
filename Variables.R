@@ -57,7 +57,7 @@ years # 20.0137 (because it doesn't account for leap years yet)
 #[71] "SNOWH_rcp85"    "T2_rcp85"       "TH2_rcp85"      "Times_rcp85"    "TSLB_rcp85"     "U10_rcp85"      "UDROFF_rcp85"  
 #[78] "V10_rcp85"      "VEGFRA_rcp85"
 
-# Hawaii Present
+# Hawaii Present (assume Maui and each other scenario follows the same format)
 #names(my.ncdf$var) # for Hawaii Present
 #[1] "HGT"      "LANDMASK" "XLAT"     "XLONG"    "CFRACL"   "CFRACT"   "FGDP"     "GLW"      "GRDFLX"   "GSW"      "HFX"     
 #[12] "I_RAINNC" "LAI"      "LH"       "LU_INDEX" "LWP"      "PSFC"     "Q2"       "RAINNC"   "SNOW"     "SNOWC"    "SNOWH"   

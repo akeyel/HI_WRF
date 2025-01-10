@@ -62,5 +62,3 @@ template.raster = terra::rast(template.raster.file)
 run.interpolation(csv.path, tif.path, csv.file, template.raster, n.neighbors = 12, power = 2) # base.path, 
 
 
-### Example 2: Get the minimum value from all years for a selected point on the map
-#**# Not scripted, but may be a useful feature
